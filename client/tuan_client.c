@@ -48,7 +48,7 @@ void create_group(int sockfd) {
     }
 }
 
-void request_join_group(int sockfd) {
+void request_to_join_group(int sockfd) {
     char request_join_group_msg[1024];
     int result, token, group_id;
 
@@ -88,6 +88,92 @@ void request_join_group(int sockfd) {
     }
 }
 
+void invite_user_to_group(int sockfd) {
+    char invite_to_group_msg[1024];
+    int result, token, group_id, invitee_id;
+
+    // Nhập tên đăng nhập và mật khẩu
+    printf("Enter group id: ");
+    scanf("%d", &group_id);
+
+    printf("Enter invitee id: ");
+    scanf("%d", &invitee_id);
+
+    printf("Enter token: ");
+    scanf("%d", &token);
+
+    // Tạo thông điệp đăng nhập
+    snprintf(invite_to_group_msg, sizeof(invite_to_group_msg), "INVITE_USER_TO_GROUP %d %d||%d", token, group_id, invitee_id);
+
+    // Gửi thông điệp đăng nhập đến server
+    if (send(sockfd, invite_to_group_msg, strlen(invite_to_group_msg), 0) < 0) {
+        perror("Send failed");
+        return;
+    }
+
+    // Nhận phản hồi từ server
+    if (recv(sockfd, &result, sizeof(result), 0) < 0) {
+        perror("Receive failed");
+        return;
+    }
+
+    // Kiểm tra kết quả tao nhom
+    if (result == 2000) {
+        printf("Invite successful\n");
+    } else if (result == 4030) {
+        printf("You not in group to invite\n");
+    } else if (result == 4040) {
+        printf("Group not exist\n");
+    } else if (result == 4041) {
+        printf("Wrong token enter\n");
+    } else if (result == 4042) {
+        printf("Invitee not existed\n");
+    } else if (result == 4090) {
+        printf("Invitee already in group\n");
+    } else {
+        printf("Login failed with unknown error code: %d\n", result);
+    }
+}
+
+void leave_group(int sockfd) {
+    char leave_group_msg[1024];
+    int result, token, group_id;
+
+    // Nhập tên đăng nhập và mật khẩu
+    printf("Enter group id: ");
+    scanf("%d", &group_id);
+
+    printf("Enter token: ");
+    scanf("%d", &token);
+
+    // Tạo thông điệp đăng nhập
+    snprintf(leave_group_msg, sizeof(leave_group_msg), "LEAVE_GROUP %d %d", token, group_id);
+
+    // Gửi thông điệp đăng nhập đến server
+    if (send(sockfd, leave_group_msg, strlen(leave_group_msg), 0) < 0) {
+        perror("Send failed");
+        return;
+    }
+
+    // Nhận phản hồi từ server
+    if (recv(sockfd, &result, sizeof(result), 0) < 0) {
+        perror("Receive failed");
+        return;
+    }
+
+    // Kiểm tra kết quả tao nhom
+    if (result == 2000) {
+        printf("Leave group successful\n");
+    } else if (result == 4030) {
+        printf("You not in group to leave\n");
+    } else if (result == 4040) {
+        printf("Group not exist\n");
+    } else if (result == 4041) {
+        printf("Wrong token enter\n");
+    } else {
+        printf("Login failed with unknown error code: %d\n", result);
+    }
+}
 
 int main() {
     int sockfd;
@@ -114,7 +200,7 @@ int main() {
     // // Thực hiện đăng nhập
     // login(sockfd);
 
-    request_join_group(sockfd);
+    leave_group(sockfd);
 
     // Đóng kết nối
     close(sockfd);

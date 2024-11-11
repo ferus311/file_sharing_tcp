@@ -77,13 +77,13 @@ void handle_client_request(int client_sock) {
         send(client_sock, &result, sizeof(result), 0);
     }
     else if (strncmp(buffer, "INVITE_USER_TO_GROUP", 8) == 0) {
-        char username[50], password[255];
-        sscanf(buffer, "INVITE_USER_TO_GROUP %s %s", username, password);
+        int token, group_id, invitee_id;
+        sscanf(buffer, "INVITE_USER_TO_GROUP %d %d||%d", &token, &group_id, &invitee_id);
 
-        int result = handle_registration(client_sock, username, password);
+        int result = handle_invite_user_to_group(client_sock, &token, &group_id, &invitee_id);
         send(client_sock, &result, sizeof(result), 0);
     }
-    else if (strncmp(buffer, "CREATE_GROUP", 8) == 0) {
+    else if (strncmp(buffer, "RESPOND_INVITATION", 8) == 0) {
         char username[50], password[255];
         sscanf(buffer, "CREATE_GROUP %s %s", username, password);
 
@@ -98,10 +98,10 @@ void handle_client_request(int client_sock) {
         send(client_sock, &result, sizeof(result), 0);
     }
     else if (strncmp(buffer, "LEAVE_GROUP", 8) == 0) {
-        char username[50], password[255];
-        sscanf(buffer, "LEAVE_GROUP %s %s", username, password);
+        int token, group_id;
+        sscanf(buffer, "LEAVE_GROUP %d %d", &token, &group_id);
 
-        int result = handle_registration(client_sock, username, password);
+        int result = handle_leave_group(client_sock, &token, &group_id);
         send(client_sock, &result, sizeof(result), 0);
     }
 }
