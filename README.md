@@ -1,11 +1,13 @@
+Ứng dụng chia sẻ file tài liệu sử dụng giao thức tcp
 
-cai thu vien su dung mysql: sudo apt-get install libmysqlclient-dev
-- Dam bao da cai mysql server
+# cai dat mysql server
+# cai thu vien su dung mysql: sudo apt-get install libmysqlclient-dev
+
+# chay file sql de tao db
+ - mysql -u root - p (login vao mysql server)
+ - source path_to_file.sql ( lenh chạy file sql)
+
 - chinh sua config trong file db.c
-
-( mysql -u root - p
-    source path_to_file.sql
-)
 
 Di chuyen den thu muc server
 chay lenh : make
