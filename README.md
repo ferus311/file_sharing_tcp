@@ -10,5 +10,5 @@
 - chinh sua config trong file db.c
 
 Di chuyen den thu muc server
-chay lenh : make
-khoi chay server: ./server
+ - chay lenh : make
+ - khoi chay server: ./server
