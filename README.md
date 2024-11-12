@@ -1,7 +1,8 @@
 Ứng dụng chia sẻ file tài liệu sử dụng giao thức tcp
 
 # cai dat mysql server
-# cai thu vien su dung mysql: sudo apt-get install libmysqlclient-dev
+# cai thu vien su dung mysql:
+ - sudo apt-get install libmysqlclient-dev
 
 # chay file sql de tao db
  - mysql -u root - p (login vao mysql server)
@@ -12,3 +13,9 @@
 Di chuyen den thu muc server
  - chay lenh : make
  - khoi chay server: ./server
+
+
+# khoi chay client
+ - dam bao da cai dat nodejs >= 16.x va npm
+ - tai dependencies : npm install
+ - chay giao dien : npm start
