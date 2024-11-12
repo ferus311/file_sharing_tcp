@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -Wall -g
-LIBS = -lmysqlclient
+CFLAGS = -Wall -I/usr/include/openssl -g
+LIBS = -lmysqlclient -lcrypto -lssl
 
-SRCS = server.c db.c user.c group.c
+SRCS = server.c db.c user.c group.c token.c
 OBJS = $(SRCS:.c=.o)
 
 server: $(OBJS)
