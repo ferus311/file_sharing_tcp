@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -g
 LIBS = -lmysqlclient
 
-SRCS = server.c db.c user.c group.c
+SRCS = server.c db.c user.c group.c file.c
 OBJS = $(SRCS:.c=.o)
 
 server: $(OBJS)
