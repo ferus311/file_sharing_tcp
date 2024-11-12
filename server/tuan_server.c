@@ -69,14 +69,14 @@ void handle_client_request(int client_sock) {
         int result = handle_registration(client_sock, username, password);
         send(client_sock, &result, sizeof(result), 0);
     }
-    else if (strncmp(buffer, "REQUEST_JOIN_GROUP", 8) == 0) {
+    else if (strncmp(buffer, "REQUEST_JOIN_GROUP", 18) == 0) {
         int token, group_id;
         sscanf(buffer, "REQUEST_JOIN_GROUP %d %d", &token, &group_id);
 
         int result = handle_request_join_group(client_sock, &token, &group_id);
         send(client_sock, &result, sizeof(result), 0);
     }
-    else if (strncmp(buffer, "INVITE_USER_TO_GROUP", 8) == 0) {
+    else if (strncmp(buffer, "INVITE_USER_TO_GROUP", 20) == 0) {
         int token, group_id, invitee_id;
         sscanf(buffer, "INVITE_USER_TO_GROUP %d %d||%d", &token, &group_id, &invitee_id);
 
@@ -97,7 +97,7 @@ void handle_client_request(int client_sock) {
         int result = handle_registration(client_sock, username, password);
         send(client_sock, &result, sizeof(result), 0);
     }
-    else if (strncmp(buffer, "LEAVE_GROUP", 8) == 0) {
+    else if (strncmp(buffer, "LEAVE_GROUP", 11) == 0) {
         int token, group_id;
         sscanf(buffer, "LEAVE_GROUP %d %d", &token, &group_id);
 
