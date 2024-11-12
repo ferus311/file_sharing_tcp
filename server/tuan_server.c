@@ -102,6 +102,7 @@ void handle_client_request(int client_sock) {
         sscanf(buffer, "LEAVE_GROUP %d %d", &token, &group_id);
 
         int result = handle_leave_group(client_sock, &token, &group_id);
+        printf("Result: %d\n", result);
         send(client_sock, &result, sizeof(result), 0);
     }
 }
