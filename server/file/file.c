@@ -6,10 +6,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <sys/socket.h> // Để sử dụng hàm send và recv
+#include <sys/socket.h>
 #include <mysql/mysql.h>
+
 #include "file.h"
-#include "db.h"
+#include "../database/db.h"
 
 #define BUFFER_SIZE 1024
 

@@ -2,9 +2,10 @@
 #include <string.h>
 #include <mysql/mysql.h>
 #include <sys/socket.h>
+#include "../token/token.h"
+#include "../database/db.h"
 #include "user.h"
-#include "token.h"
-#include "db.h"
+
 
 // Handle user login
 int handle_login(int client_sock, const char *username, const char *password) {

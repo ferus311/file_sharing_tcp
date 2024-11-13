@@ -5,6 +5,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
+#include "token.h"
 
 #define TOKEN_EXPIRY 3600 // Thời gian hết hạn token (1 giờ)
 

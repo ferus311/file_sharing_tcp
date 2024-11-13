@@ -8,9 +8,9 @@
 #include <mysql/mysql.h>
 #include <fcntl.h>
 #include <sys/select.h>
-#include "user.h"
-#include "group.h"
-#include "db.h"
+#include "user/user.h"
+#include "group/group.h"
+#include "database/db.h"
 
 #define PORT 1234
 #define BACKLOG 10
@@ -172,12 +172,9 @@ void handle_command(int client_sock, const char *command, const char *token, con
     {
         char *tokens[2];
         split(data, "||", tokens, 2);
-        int group_id = atoi(tokens[0]);
 
+        int group_id = atoi(tokens[0]);
         const char *timestamp = tokens[1];
-        printf("Received LOG_ACTIVITY command\n");
-        printf("Group ID: %d\n", group_id);
-        printf("Timestamp: %s\n", timestamp);
         show_log(client_sock, group_id, timestamp);
     }
     else if (strcmp(command, "CREATE_GROUP") == 0)

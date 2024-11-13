@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "buffer.h": "c",
+        "db.h": "c",
+        "token.h": "c"
+    }
+}
