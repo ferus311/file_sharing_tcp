@@ -194,13 +194,13 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "REQUEST_JOIN_GROUP") == 0)
     {
         split(data, "||", tokens, 1);
-        handle_request_join_group(client_sock, token, tokens[0]);
+        // handle_request_join_group(client_sock, token, tokens[0]);
         // Handle request join group with token and group ID
     }
     else if (strcmp(command, "INVITE_USER_TO_GROUP") == 0)
     {
         split(data, "||", tokens, 2);
-        handle_invite_user_to_group(client_sock, token, tokens[0], tokens[1]);
+        // handle_invite_user_to_group(client_sock, token, tokens[0], tokens[1]);
     }
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
@@ -215,7 +215,7 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "LEAVE_GROUP") == 0)
     {
         split(data, "||", tokens, 1);
-        handle_leave_group(client_sock, token, tokens[0]);
+        // handle_leave_group(client_sock, token, tokens[0]);
         // Handle leave group with token and group ID
     }
     else if (strcmp(command, "REMOVE_MEMBER") == 0)
