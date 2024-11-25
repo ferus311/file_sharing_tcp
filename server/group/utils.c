@@ -2,6 +2,7 @@
 #include <string.h>
 #include <mysql/mysql.h>
 #include <sys/socket.h>
+#include "../token/token.h"
 #include "utils.h"
 
 extern MYSQL *conn;
@@ -27,9 +28,9 @@ int check_group_exist_by_name(int client_sock, const char *group_name){
 }
 
 // Check group exist by id
-int check_group_exist_by_id(int client_sock, int *group_id){
+int check_group_exist_by_id(int client_sock, int group_id){
     char query[512];
-    snprintf(query, sizeof(query), "SELECT group_id FROM `groups` WHERE group_id = %d", *group_id);
+    snprintf(query, sizeof(query), "SELECT group_id FROM `groups` WHERE group_id = %d", group_id);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -44,9 +45,9 @@ int check_group_exist_by_id(int client_sock, int *group_id){
 }
 
 // Check user in group
-int check_user_in_group(int client_sock, int *user_id, int *group_id){
+int check_user_in_group(int client_sock, int user_id, int group_id){
     char query[512];
-    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM user_groups WHERE user_id = %d AND group_id = %d", *user_id, *group_id);
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -62,9 +63,9 @@ int check_user_in_group(int client_sock, int *user_id, int *group_id){
 }
 
 // Check user exist by id
-int check_user_exist_by_id(int client_sock, int *user_id){
+int check_user_exist_by_id(int client_sock, int user_id){
     char query[512];
-    snprintf(query, sizeof(query), "SELECT username FROM users WHERE user_id = %d", *user_id);
+    snprintf(query, sizeof(query), "SELECT username FROM users WHERE user_id = %d", user_id);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -76,4 +77,10 @@ int check_user_exist_by_id(int client_sock, int *user_id){
     }
     mysql_free_result(res);
     return 0;
+}
+
+int get_user_id_by_token(const char *token){
+    char user_id[512];
+    validate_token(token, user_id);
+    return atoi(user_id);
 }
