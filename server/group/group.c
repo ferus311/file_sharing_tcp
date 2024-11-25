@@ -60,9 +60,9 @@ void show_log(int client_sock, int group_id, const char *timestamp) {
 
 
 // Tạo nhóm
-int handle_create_group(int client_sock, const char *group_name) {
+int handle_create_group(int client_sock, const char *token, const char *group_name) {
     char query[512];
-    char username[50];
+    char user_id[256];
     int code;
 
     // Step 1: Check if group name already exists
@@ -72,7 +72,11 @@ int handle_create_group(int client_sock, const char *group_name) {
     }
 
     // Step 2: Create the group
-    snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, *token);
+    // FIXME: how to get user_id
+    int result = validate_token(token, user_id);
+    int user_id_int = atoi(user_id);
+
+    snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, user_id_int);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -88,7 +92,7 @@ int handle_create_group(int client_sock, const char *group_name) {
 // FIXME: change token to user_id 
 int handle_request_join_group(int client_sock, int *token, int *group_id) {
     char query[512];
-    char username[50];
+    char user_id[256];
     int code;
 
     // Step 1: Find username by user_id
