@@ -132,6 +132,7 @@ void handle_client_request(int client_sock)
     buffer[bytes_read] = '\0';
 
     char command[50], token[512], data[1024];
+    printf("%s\n",buffer);
     parse_message(buffer, command, token, data);
     handle_command(client_sock, command, token, data);
 }

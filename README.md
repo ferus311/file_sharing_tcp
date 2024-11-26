@@ -16,6 +16,7 @@ Di chuyen den thu muc server
 
 
 # khoi chay client
- - dam bao da cai dat nodejs >= 16.x va npm
+ - dam bao da cai dat nodejs >= 20.x va npm
  - tai dependencies : npm install
  - chay giao dien : npm start
+ - mo 1 tab khac ben clien : npm run dev

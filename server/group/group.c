@@ -86,7 +86,7 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
 }
 
 // Tham gia nhóm
-// FIXME: change token to user_id 
+// FIXME: change token to user_id
 int handle_request_join_group(int client_sock, const char *token, int group_id) {
     char query[512];
     int code;
@@ -98,7 +98,7 @@ int handle_request_join_group(int client_sock, const char *token, int group_id) 
         fprintf(stderr, "SELECT failed step 1. Error: %s\n", mysql_error(conn));
         return -1; // User not found
     }
-    
+
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL) {
         send(client_sock, "4041\r\n", 6, 0); // User not found
@@ -126,7 +126,7 @@ int handle_request_join_group(int client_sock, const char *token, int group_id) 
     }
 
     // Step 5: Send the response back to the client
-    send_message(client_sock, 2000, NULL);    
+    send_message(client_sock, 2000, NULL);
     return 2000;
 }
 
@@ -153,7 +153,7 @@ int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id) {
     if (code) {
         return code;
     }
-    
+
     // Step 5: Insert into user_groups
     // FIXME: Insert into queue
     snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, %d)", invitee_id, group_id);
@@ -209,7 +209,7 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
     char query[512];
     int code;
     MYSQL_ROW row;
-    
+
     // Step 1: Check if group_id is existed
     code = check_group_exist_by_id(client_sock, group_id);
     if (code){
@@ -236,7 +236,7 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
         return -1;
     }
     res = mysql_store_result(conn);
-    
+
     int int_user_id = get_user_id_by_token(token);
 
     // Get create by user_id
