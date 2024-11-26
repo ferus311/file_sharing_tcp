@@ -185,22 +185,27 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "LIST_GROUPS") == 0)
     {
         // Handle list groups with token
+        handle_list_group(client_sock, token);
     }
     else if (strcmp(command, "LIST_GROUP_MEMBERS") == 0)
     {
         split(data, "||", tokens, 1);
-        // Handle list group members with token and group ID
+        int group_id = atoi(tokens[0]);
+        handle_list_group_members(client_sock, token, group_id);
     }
     else if (strcmp(command, "REQUEST_JOIN_GROUP") == 0)
     {
         split(data, "||", tokens, 1);
-        handle_request_join_group(client_sock, token, tokens[0]);
+        int group_id = atoi(tokens[0]);
+        handle_request_join_group(client_sock, token, group_id);
         // Handle request join group with token and group ID
     }
     else if (strcmp(command, "INVITE_USER_TO_GROUP") == 0)
     {
         split(data, "||", tokens, 2);
-        handle_invite_user_to_group(client_sock, token, tokens[0], tokens[1]);
+        int group_id = atoi(tokens[0]);
+        int invitee_id = atoi(tokens[1]);
+        handle_invite_user_to_group(client_sock, group_id, invitee_id);
     }
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
@@ -215,13 +220,16 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "LEAVE_GROUP") == 0)
     {
         split(data, "||", tokens, 1);
-        handle_leave_group(client_sock, token, tokens[0]);
+        int group_id = atoi(tokens[0]);
+        handle_leave_group(client_sock, token, group_id);
         // Handle leave group with token and group ID
     }
     else if (strcmp(command, "REMOVE_MEMBER") == 0)
     {
         split(data, "||", tokens, 2);
-        // Handle remove member with token, group ID, and user ID
+        int group_id = atoi(tokens[0]);
+        int user_id = atoi(tokens[1]);
+        handle_remove_member(client_sock, token, group_id, user_id);
     }
     else if (strcmp(command, "LIST_DIRECTORY_CONTENT") == 0)
     {

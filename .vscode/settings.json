@@ -3,6 +3,7 @@
         "*.embeddedhtml": "html",
         "buffer.h": "c",
         "db.h": "c",
-        "token.h": "c"
+        "token.h": "c",
+        "mysql.h": "c"
     }
 }
