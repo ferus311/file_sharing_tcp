@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
+import Layout from './components/Layout';
 
 function App() {
     return (
@@ -16,9 +17,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/log-activity" element={<LogActivity />} />
-                    <Route path="/" element={<Homepage />} />
-                    {/* <Route path="/home" element={<Homepage />} /> */}
-
+                    <Route path="/" element={<Layout><Homepage /></Layout>} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

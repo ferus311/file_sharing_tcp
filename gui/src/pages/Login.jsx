@@ -35,7 +35,7 @@ function Login() {
 
     return (
         <div className="container mt-5">
-            <div className="row justify-content-center">
+            <div className="row justify-content-center py-5 ">
                 <div className="col-md-6">
                     <div className="card shadow">
                         <div className="card-body">
