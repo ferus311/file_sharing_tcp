@@ -1,12 +1,27 @@
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Dropdown, Menu } from "antd";
 
 
 const Header = () => {
+    const { token, username, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const menu = (
+        <Menu>
+            <Menu.Item key="profile" onClick={() => navigate("/profile")}>
+                Profile
+            </Menu.Item>
+            <Menu.Item key="logout" onClick={logout}>
+                Log Out
+            </Menu.Item>
+        </Menu>
+    );
 
     return (
         <div>
-            <div class="mouse-cursor cursor-outer"></div>
-            <div class="mouse-cursor cursor-inner"></div>
+            <div className="mouse-cursor cursor-outer"></div>
+            <div className="mouse-cursor cursor-inner"></div>
 
             <div class="fix-area">
                 <div class="offcanvas__info">
@@ -83,24 +98,24 @@ const Header = () => {
                 </div>
             </div>
 
-            <header class="header-section-1">
-                <div id="header-sticky" class="header-1">
-                    <div class="container">
-                        <div class="mega-menu-wrapper">
-                            <div class="header-main">
-                                <div class="header-left">
-                                    <div class="logo">
-                                        <a href="index.html" class="header-logo">
+            <header className="header-section-1">
+                <div id="header-sticky" className="header-1">
+                    <div className="container">
+                        <div className="mega-menu-wrapper">
+                            <div className="header-main">
+                                <div className="header-left">
+                                    <div className="logo">
+                                        <a href="index.html" className="header-logo">
                                             <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
                                         </a>
-                                        <a href="index.html" class="header-logo-2">
+                                        <a href="index.html" className="header-logo-2">
                                             <img src="assets/img/logo/black-logo.svg" alt="logo-img" />
                                         </a>
                                     </div>
                                 </div>
-                                <div class="header-right d-flex justify-content-end align-items-center">
-                                    <div class="mean__menu-wrapper">
-                                        <div class="main-menu">
+                                <div className="header-right d-flex justify-content-end align-items-center">
+                                    <div className="mean__menu-wrapper">
+                                        <div className="main-menu">
                                             <nav id="mobile-menu">
                                                 <ul>
                                                     <li class="has-dropdown active menu-thumb">
@@ -156,20 +171,29 @@ const Header = () => {
                                             </nav>
                                         </div>
                                     </div>
-                                    <a href="news-grid.html#0" class="search-trigger search-icon"><i
-                                        class="fal fa-search"></i></a>
-                                    <div class="header__hamburger d-xl-block my-auto">
-                                        <div class="sidebar__toggle">
-                                            <i class="fas fa-bars"></i>
+                                    <a href="news-grid.html#0" className="search-trigger search-icon">
+                                        <i className="fal fa-search"></i>
+                                    </a>
+                                    <div className="header__hamburger d-xl-block my-auto">
+                                        <div className="sidebar__toggle">
+                                            <i className="fas fa-bars"></i>
                                         </div>
                                     </div>
-                                    <div class="button">
-                                        <Link to={"/login"}>
-                                            <a class="theme-btn">
-                                                Login
-                                                <i class="fa-solid fa-arrow-right-long"></i>
-                                            </a>
-                                        </Link>
+                                    <div className="button">
+                                        {token ? (
+                                            <Dropdown overlay={menu} trigger={['click']}>
+                                                <span className="user-info theme-btn">
+                                                    Welcome, {username}!
+                                                </span>
+                                            </Dropdown>
+                                        ) : (
+                                            <Link to={"/login"}>
+                                                <a className="theme-btn">
+                                                    Login
+                                                    <i className="fa-solid fa-arrow-right-long"></i>
+                                                </a>
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -178,7 +202,7 @@ const Header = () => {
                 </div>
             </header>
         </div>
-    )
-}
+    );
+};
 
 export default Header;

@@ -11,16 +11,23 @@ import Layout from './components/Layout';
 
 function App() {
     return (
-        <AuthProvider>
-            <BrowserRouter>
+        <BrowserRouter>
+            <AuthProvider>
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/log-activity" element={<LogActivity />} />
-                    <Route path="/" element={<Layout><Homepage /></Layout>} />
+                    <Route
+                        path="/"
+                        element={
+                            <Layout>
+                                <Homepage />
+                            </Layout>
+                        }
+                    />
                 </Routes>
-            </BrowserRouter>
-        </AuthProvider>
+            </AuthProvider>
+        </BrowserRouter>
     );
 }
 

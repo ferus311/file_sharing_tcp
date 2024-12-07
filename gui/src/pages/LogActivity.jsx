@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 function LogActivity() {
+
     const { token } = useAuth(); // Lấy token từ Context
     const [groupId, setGroupId] = useState('');
     const [timestamp, setTimestamp] = useState('');
@@ -37,7 +38,7 @@ function LogActivity() {
                         className="form-control"
                         placeholder="Enter Token"
                         value={token}
-                        // onChange={(e) => setToken(e.target.value)}
+                    // onChange={(e) => setToken(e.target.value)}
                     />
                 </div>
                 <div className="form-group mb-3">
