@@ -72,6 +72,20 @@ CREATE TABLE IF NOT EXISTS activity_log (
     FOREIGN KEY (target_id) REFERENCES `groups`(group_id)
 );
 
+-- Bảng lưu trữ lời mời và yêu cầu gia nhập nhóm
+CREATE TABLE IF NOT EXISTS group_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,  -- Người gửi yêu cầu hoặc nhận lời mời
+    group_id INT NOT NULL,  -- Nhóm mà yêu cầu hoặc lời mời hướng đến
+    request_type ENUM('join_request', 'invitation') NOT NULL,  -- Kiểu yêu cầu: xin gia nhập ('join_request') hoặc lời mời ('invitation')
+    status ENUM('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',  -- Trạng thái của yêu cầu (chờ, chấp nhận, từ chối)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời gian tạo yêu cầu
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- Thời gian cập nhật yêu cầu
+    FOREIGN KEY (user_id) REFERENCES users(user_id),  -- Tham chiếu đến người dùng
+    FOREIGN KEY (group_id) REFERENCES `groups`(group_id)  -- Tham chiếu đến nhóm
+);
+
+
 -- Thêm dữ liệu mẫu vào bảng users
 INSERT INTO users (username, password) VALUES
 ('user1', 'password1'),
