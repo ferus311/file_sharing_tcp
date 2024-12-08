@@ -10,6 +10,8 @@
 
 -   mysql -u root - p (login vao mysql server)
 -   source path_to_file.sql ( lenh chạy file sql)
+- or: mysql -u [username] -p [database_name] < /path/to/your/file.sql
+
 
 -   chinh sua config trong file db.c
 
