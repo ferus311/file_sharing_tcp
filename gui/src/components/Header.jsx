@@ -1,11 +1,13 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Dropdown, Menu } from "antd";
-
+import { useState } from "react";
+import SearchGroups from "./SearchGroups";
 
 const Header = () => {
     const { token, username, logout } = useAuth();
     const navigate = useNavigate();
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
     const menu = (
         <Menu>
@@ -81,9 +83,13 @@ const Header = () => {
                                             </nav>
                                         </div>
                                     </div>
-                                    <a href="news-grid.html#0" className="search-trigger search-icon" style={{ color: 'white' }}>
+                                    <button style={{ color: 'white' }} onClick={() => setIsModalVisible(true)}>
                                         <i className="fal fa-search"></i>
-                                    </a>
+                                    </button>
+                                    <SearchGroups
+                                        visible={isModalVisible}
+                                        onClose={() => setIsModalVisible(false)} 
+                                    />
                                     <div className="header__hamburger d-xl-block my-auto">
                                         <div className="sidebar__toggle">
                                             <i className="fas fa-bars" style={{ color: 'white' }}></i>

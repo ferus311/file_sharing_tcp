@@ -17,7 +17,10 @@ const Homepage = () => {
     useEffect(() => {
         const fetchGroups = async () => {
             try {
-                const response = await window.electronAPI.listGroups(token);
+                const response = token
+                    ? await window.electronAPI.listGroups(token) // Gửi token nếu có
+                    : await window.electronAPI.listGroups("");
+
                 if (response.startsWith('2000')) {
                     const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
                     const groupArray = data

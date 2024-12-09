@@ -81,8 +81,9 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
     // Step 2: Create the group
     int user_id = get_user_id_by_token(token);
 
-      snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, user_id);
-    if (mysql_query(conn, query)) {
+    snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, user_id);
+    if (mysql_query(conn, query))
+    {
         fprintf(stderr, "Failed to create group: %s\n", mysql_error(conn));
         return -1;
     }
@@ -92,11 +93,11 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
 
     // Thêm người dùng vào nhóm với vai trò admin
     snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id, role) VALUES (%d, %d, 'admin')", user_id, group_id);
-    if (mysql_query(conn, query)) {
+    if (mysql_query(conn, query))
+    {
         fprintf(stderr, "Failed to add user to group: %s\n", mysql_error(conn));
         return -1;
     }
-
 
     // Step 3: Send the response back to the client
     char response[1024];
@@ -307,65 +308,87 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
 // Liệt kê danh sách nhóm người dùng
 int handle_list_group(int client_sock, const char *token)
 {
-
     char query[512];
-    int user_id = get_user_id_by_token(token);
+    char combined_groups[4096] = "";
 
-    // Step 2: get group_id user joined
-    snprintf(query, sizeof(query), "SELECT group_id FROM user_groups WHERE user_id = %d", user_id);
+    if (token == NULL || strlen(token) == 0)
+    {
+        // Nếu không có token, lấy tất cả các nhóm
+        snprintf(query, sizeof(query), "SELECT group_id, group_name FROM `groups`");
+    }
+    else
+    {
+        // Nếu có token, lấy các nhóm người dùng đã tham gia
+        int user_id = get_user_id_by_token(token);
+
+        // Lấy group_id mà người dùng đã tham gia
+        snprintf(query, sizeof(query), "SELECT group_id FROM user_groups WHERE user_id = %d", user_id);
+    }
+
     if (mysql_query(conn, query))
     {
         fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
         return -1;
     }
+
     MYSQL_RES *res = mysql_store_result(conn);
 
     MYSQL_ROW row;
-    char combined_groups[4096] = "";
 
     if (mysql_num_rows(res) == 0)
     {
-        // User has no groups
+        // Không có nhóm
         send_message(client_sock, 2000, NULL);
         mysql_free_result(res);
         return 2000;
     }
 
+    // Nếu không có token, sẽ có cả group_id và group_name trong kết quả
     while ((row = mysql_fetch_row(res)) != NULL)
     {
-        int group_id = atoi(row[0]);
+        int group_id;
+        const char *group_name;
 
-        // Get group_name from groups table
-        snprintf(query, sizeof(query), "SELECT group_name FROM `groups` WHERE group_id = %d", group_id);
-        if (mysql_query(conn, query))
+        // Nếu có token, chỉ trả về các nhóm mà người dùng tham gia
+        if (token != NULL && strlen(token) > 0)
         {
-            fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
-            return -1;
+            group_id = atoi(row[0]);
+            snprintf(query, sizeof(query), "SELECT group_name FROM `groups` WHERE group_id = %d", group_id);
+
+            if (mysql_query(conn, query))
+            {
+                fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+                return -1;
+            }
+
+            MYSQL_RES *res_group = mysql_store_result(conn);
+            MYSQL_ROW row_group = mysql_fetch_row(res_group);
+            group_name = row_group[0];
+
+            mysql_free_result(res_group);
+        }
+        else
+        {
+            // Nếu không có token, lấy cả tên nhóm từ bảng `groups`
+            group_id = atoi(row[0]);
+            group_name = row[1];
         }
 
-        MYSQL_RES *res_group = mysql_store_result(conn);
-
-        MYSQL_ROW row_group = mysql_fetch_row(res_group);
-        char *group_name = row_group[0];
-
-        // Create string in format group_name&group_id
+        // Tạo chuỗi theo định dạng group_name&group_id
         char group_entry[256];
         snprintf(group_entry, sizeof(group_entry), "%d&%s", group_id, group_name);
 
-        // Append to combined_groups with separator ||
+        // Nối vào combined_groups với separator ||
         if (strlen(combined_groups) > 0)
         {
             strncat(combined_groups, "||", sizeof(combined_groups) - strlen(combined_groups) - 1);
         }
         strncat(combined_groups, group_entry, sizeof(combined_groups) - strlen(combined_groups) - 1);
-
-        mysql_free_result(res_group);
     }
 
     mysql_free_result(res);
 
-    // Send response to client
-    // printf("%s", combined_groups);
+    // Gửi phản hồi đến client
     send_message(client_sock, 2000, combined_groups);
 
     return 2000;
