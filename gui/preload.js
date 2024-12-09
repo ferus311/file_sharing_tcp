@@ -27,5 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('approve-join-request', token, groupId, userId),
     removemember: (token, groupId, userId) =>
         ipcRenderer.invoke('remove-member', token, groupId, userId),
+    listDirectory: (token, groupId, directoryId) =>
+        ipcRenderer.invoke('list-directory-content', token, groupId, directoryId),
     
 });

@@ -119,8 +119,8 @@ ipcMain.handle('remove-member', async (event, token, groupId, userId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('list-directory-content', async (event, token, directoryId) => {
+ipcMain.handle('list-directory-content', async (event, token, groupId, directoryId) => {
     await connectionManager.connect();
-    const message = `LIST_DIRECTORY_CONTENT ${token}||${directoryId}\r\n`;
+    const message = `LIST_DIRECTORY_CONTENT ${token}||${groupId}||${directoryId}\r\n`;
     return connectionManager.sendMessage(message);
 });
