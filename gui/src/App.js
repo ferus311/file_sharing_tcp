@@ -9,8 +9,10 @@ import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
 import Layout from './components/Layout';
 import GroupDetail from './pages/GroupDetail';
-import { Documents, Members, LeaveGroup } from './pages/GroupDetail';
+import FolderDetail from './pages/FolderDetail';
+import FileDetail from './pages/FileDetail';
 import './style.css';
+
 
 function App() {
     return (
@@ -22,13 +24,15 @@ function App() {
                     <Route path="/log-activity" element={<LogActivity />} />
                     {/* <Route path="/group-members" element={<GroupMembers/>} /> */}
                     <Route
-                        path="/group/:group_id"
+                        path="/group/:groupId"
                         element={
                             <Layout>
                                 <GroupDetail />
                             </Layout>
                         }
                     />
+                    <Route path="/group/:groupId/folder/:folderId" element={<Layout><FolderDetail /></Layout>} />
+                    <Route path="/group/:groupId/file/:fileId" element={<Layout><FileDetail /></Layout>} />
                     <Route
                         path="/"
                         element={

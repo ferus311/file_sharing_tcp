@@ -124,3 +124,10 @@ ipcMain.handle('list-directory-content', async (event, token, groupId, directory
     const message = `LIST_DIRECTORY_CONTENT ${token}||${groupId}||${directoryId}\r\n`;
     return connectionManager.sendMessage(message);
 });
+
+ipcMain.handle('list-group-content', async (event, token, groupId) => {
+    await connectionManager.connect();
+    const message = `LIST_GROUP_CONTENT ${token}||${groupId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+

@@ -11,11 +11,14 @@ const Documents = ({ items }) => (
     <List
         grid={{ gutter: 16, column: 4 }}
         dataSource={items}
+        loading={loading}
         renderItem={item => (
-            <List.Item>
+            <List.Item key={item.id}>
                 <Card
                     className="custom-card shadow-sm p-3 mb-5 bg-white rounded"
                     title={item.type === 'D' ? <FolderOutlined className="large-icon" /> : <FileOutlined className="large-icon" />}
+                    onClick={() => handleItemClick(item)}
+                    hoverable
                 >
                     <Card.Meta
                         title={item.type === 'D' ? `Directory: ${item.name}` : `File: ${item.name}`}
@@ -51,17 +54,52 @@ const GroupDetail = () => {
     const { token } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
     const { groupId, groupName } = location.state || {};
     const [currentView, setCurrentView] = useState('documents'); // Trạng thái hiện tại của nội dung
     const [items, setItems] = useState([]);
     const [members, setMembers] = useState([]);
 
-    useEffect(() => {
-        // Simulate API call
-        const apiFileResponse = "2000 D&dir_id1&dir_name1||F&file_id1&file_name1||D&dir_id2&dir_name2||F&file_id2&file_name2";
+    const fetchListGroupContent = async (groupId) => {
+        setLoading(true);
+        try {
+            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
+            const response = await window.electronAPI.listGroupContent(cleanToken, groupId);
 
-        const parsedFileItems = parseApiDirResponse(apiFileResponse);
-        setItems(parsedFileItems);
+            if (response.startsWith('2000')) {
+                let data = response.slice(5).trim();
+                if (data.endsWith('||')) data = data.slice(0, -2);
+
+                const dataArray = data.split('||').map(item => {
+                    const [type, id, name] = item.split('&');
+                    return { type, id: parseInt(id, 10), name };
+                });
+
+                setItems(dataArray);
+            } else {
+                console.error('Failed to fetch groups:', response);
+                setItems([]);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleItemClick = (item) => {
+        if (item.type === 'D') {
+            navigate(`/group/${groupId}/folder/${item.id}`);
+            setCurrentPath(prevPath => [...prevPath, item.name]);
+        } else {
+            navigate(`/group/${groupId}/file/${item.id}`);
+        }
+    };
+
+    useEffect(() => {
+        
+        fetchListGroupContent(groupId);
 
         const fetchGroupMembers = async () => {
             try {
@@ -80,10 +118,6 @@ const GroupDetail = () => {
         };
 
         fetchGroupMembers();
-        // const apiMemberResponse = "2000 MEMBER_ID1&MEMBER_Name1||MEMBER_ID2&MEMBER_Name2";
-        // const parsedMemItems = parseApiMemberResponse(apiMemberResponse);
-        // setMembers(parsedMemItems);
-
 
     }, [groupId]);
 

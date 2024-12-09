@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include "user/user.h"
+#include "file/file.h"
 #include "group/group.h"
 #include "database/db.h"
 
@@ -170,7 +171,7 @@ void handle_command(int client_sock, const char *command, const char *token, con
 
     else if (strcmp(command, "LOG_ACTIVITY") == 0)
     {
-        char *tokens[2];
+        // char *tokens[2];
         split(data, "||", tokens, 2);
 
         int group_id = atoi(tokens[0]);
@@ -235,10 +236,26 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int user_id = atoi(tokens[1]);
         handle_remove_member(client_sock, token, group_id, user_id);
     }
+    else if (strcmp(command, "LIST_GROUP_CONTENT") == 0)
+    {
+        split(data, "||", tokens, 2);
+        if (tokens[1] != NULL) {
+            int group_id = atoi(tokens[1]);
+            handle_list_group_content(client_sock, token, group_id);
+        } else {
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi yêu cầu không hợp lệ
+        }
+    }
     else if (strcmp(command, "LIST_DIRECTORY_CONTENT") == 0)
     {
-        split(data, "||", tokens, 1);
-        handle_remove_member(client_sock, token, atoi(tokens[0]), atoi(tokens[1]));
+        split(data, "||", tokens, 3);
+        if (tokens[1] != NULL && tokens[1] != NULL) {
+            int group_id = atoi(tokens[1]);
+            int folder_id = atoi(tokens[2]);
+            handle_list_directory(client_sock, token, group_id,folder_id);
+        } else {
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi yêu cầu không hợp lệ
+        }
     }
     else if (strcmp(command, "UPLOAD_FILE") == 0)
     {
@@ -301,3 +318,4 @@ void split(const char *str, const char *delim, char **out, int max_tokens)
 
     free(str_copy); // Giải phóng bộ nhớ của bản sao chuỗi
 }
+
