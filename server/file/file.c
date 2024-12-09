@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <mysql/mysql.h>
 
+#include "../group/utils.h"
 #include "file.h"
 #include "../database/db.h"
 
@@ -24,89 +25,89 @@ void send_status(int client_sock, int status_code)
     send(client_sock, response, strlen(response), 0);
 }
 
-// Liệt kê các file trong thư mục
-int handle_list_directory(int client_sock, const char *token, const char *group_id, const char *dir_id)
+int handle_list_group_content(int client_sock, const char *token, int group_id)
 {
-    // // Lấy user_id từ token
-    // int user_id = get_user_id_by_token(token);
-    // if (user_id == -1)
-    // {
-    //     send(client_sock, "4010\r\n", 6, 0); // Token không hợp lệ
-    //     return 4010;  // Mã lỗi nếu không tìm thấy user_id từ token
-    // }
+    char query[2048];
+    char response[2048] = "2000 "; // Mã thành công
 
-    char query[1024];
-    char response[2048] = "2000 "; // 2000 là mã thành công
-
-    // Nếu dir_id là NULL hoặc không có, liệt kê các thư mục con trong nhóm
-    if (dir_id == NULL || strcmp(dir_id, "") == 0) {
-        // Liệt kê các thư mục gốc trong nhóm
-        snprintf(query, sizeof(query), 
-                 "SELECT dir_id, dir_name FROM directories WHERE group_id = '%s' AND parent_id IS NULL", group_id);
-    } else {
-        // Nếu có dir_id, liệt kê các thư mục con trong thư mục này
-        snprintf(query, sizeof(query), 
-                 "SELECT dir_id, dir_name FROM directories WHERE group_id = '%s' AND parent_id = '%s'", 
-                 group_id, dir_id);
-    }
+    // Liệt kê các thư mục gốc trong nhóm
+    snprintf(query, sizeof(query), 
+             "SELECT dir_id, dir_name FROM directories WHERE group_id = %d AND parent_id IS NULL", group_id);
 
     // Thực thi câu truy vấn thư mục
     if (mysql_query(conn, query))
     {
-        send(client_sock, "5000\r\n", 6, 0); // Lỗi trong quá trình thực thi truy vấn
-        return 5000;
+        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi truy vấn
+        return -1;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL)
-    {
-        send(client_sock, "5000\r\n", 6, 0); // Lỗi lưu kết quả
-        return 5000; 
-    }
-
     MYSQL_ROW row;
 
     // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
-    while ((row = mysql_fetch_row(res)) != NULL)
+    while ((row = mysql_fetch_row(res)) != NULL) 
     {
-        snprintf(response + strlen(response), sizeof(response) - strlen(response), "DIR:%s&%s||", row[0], row[1]);
+        if (row[0] == NULL || row[1] == NULL) {
+            continue; // Bỏ qua nếu dữ liệu NULL
+        }
+
+        int dir_id = atoi(row[0]); // id thư mục
+        char *dir_name = row[1];    // tên thư mục
+
+        // Kiểm tra xem có đủ không gian trong response buffer
+        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response)) {
+            fprintf(stderr, "Buffer overflow detected in response.\n");
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
+            mysql_free_result(res);
+            return -1;
+        }
+
+        // Thêm thư mục vào phản hồi
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "D&%d&%s||", dir_id, dir_name);
     }
 
     mysql_free_result(res); // Giải phóng kết quả truy vấn thư mục
 
-    // Truy vấn các tệp trong thư mục
-    if (dir_id == NULL || strcmp(dir_id, "") == 0) {
-        // Nếu dir_id là NULL, tìm các tệp không có thư mục (dir_id IS NULL)
-        snprintf(query, sizeof(query), 
-                 "SELECT file_id, file_name FROM files WHERE group_id = '%s' AND dir_id IS NULL", group_id);
-    } else {
-        // Nếu có dir_id, tìm các tệp trong thư mục đó
-        snprintf(query, sizeof(query), 
-                 "SELECT file_id, file_name FROM files WHERE group_id = '%s' AND dir_id = '%s'", 
-                 group_id, dir_id);
-    }
+    // Truy vấn các tệp trong nhóm (không phân biệt theo thư mục)
+    snprintf(query, sizeof(query), 
+             "SELECT file_id, file_name FROM files WHERE group_id = %d AND dir_id IS NULL", group_id);
 
-    // Thực thi câu truy vấn tệp
+    // Log câu truy vấn SQL cho tệp
+
     if (mysql_query(conn, query))
     {
-        send(client_sock, "5000\r\n", 6, 0); // Lỗi trong quá trình thực thi truy vấn
-        return 5000;
+        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi truy vấn
+        return -1;
     }
 
-    res = mysql_store_result(conn);
-    if (res == NULL)
+    MYSQL_RES *res2 = mysql_store_result(conn);
+    MYSQL_ROW row2;
+
+    // Duyệt qua các tệp và thêm vào kết quả phản hồi
+    while ((row2 = mysql_fetch_row(res2)) != NULL) 
     {
-        send(client_sock, "5000\r\n", 6, 0); // Lỗi lưu kết quả
-        return 5000;
+        if (row2[0] == NULL || row2[1] == NULL) {
+            continue; // Bỏ qua nếu dữ liệu NULL
+        }
+
+        int file_id = atoi(row2[0]); // id tệp
+        char *file_name = row2[1];    // tên tệp
+
+        // Kiểm tra xem có đủ không gian trong response buffer
+        if (strlen(response) + strlen(file_name) + 10 > sizeof(response)) {
+            fprintf(stderr, "Buffer overflow detected in response.\n");
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
+            mysql_free_result(res2);
+            return -1;
+        }
+
+        // Thêm tệp vào phản hồi
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "F&%d&%s||", file_id, file_name);
     }
 
-    // Duyệt qua các file và thêm vào kết quả phản hồi
-    while ((row = mysql_fetch_row(res)) != NULL)
-    {
-        snprintf(response + strlen(response), sizeof(response) - strlen(response), "FILE:%s&%s||", row[0], row[1]);
-    }
-
-    mysql_free_result(res); // Giải phóng kết quả truy vấn tệp
+    mysql_free_result(res2); // Giải phóng kết quả truy vấn tệp
 
     // Nếu có thư mục hoặc tệp, gửi kết quả về client
     if (strlen(response) > 5) // Kiểm tra xem có thư mục hoặc tệp nào không (có '2000 ' ở đầu)
@@ -121,6 +122,102 @@ int handle_list_directory(int client_sock, const char *token, const char *group_
     return 2000; // Thành công
 }
 
+int handle_list_directory(int client_sock, const char *token, int group_id, int dir_id)
+{
+    char query[2048];
+    char response[2048] = "2000 "; // Mã thành công
+
+    // Liệt kê các thư mục gốc trong nhóm
+    snprintf(query, sizeof(query), 
+             "SELECT dir_id, dir_name FROM directories WHERE group_id = %d AND parent_id = %d", group_id, dir_id);
+
+    // Thực thi câu truy vấn thư mục
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi truy vấn
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_ROW row;
+
+    // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
+    while ((row = mysql_fetch_row(res)) != NULL) 
+    {
+        if (row[0] == NULL || row[1] == NULL) {
+            continue; // Bỏ qua nếu dữ liệu NULL
+        }
+
+        int dir_id = atoi(row[0]); // id thư mục
+        char *dir_name = row[1];    // tên thư mục
+
+        // Kiểm tra xem có đủ không gian trong response buffer
+        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response)) {
+            fprintf(stderr, "Buffer overflow detected in response.\n");
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
+            mysql_free_result(res);
+            return -1;
+        }
+
+        // Thêm thư mục vào phản hồi
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "D&%d&%s||", dir_id, dir_name);
+    }
+
+    mysql_free_result(res); // Giải phóng kết quả truy vấn thư mục
+
+    // Truy vấn các tệp trong nhóm (không phân biệt theo thư mục)
+    snprintf(query, sizeof(query), 
+             "SELECT file_id, file_name FROM files WHERE group_id = %d AND dir_id = %d", group_id, dir_id);
+
+    // Log câu truy vấn SQL cho tệp
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi truy vấn
+        return -1;
+    }
+
+    MYSQL_RES *res2 = mysql_store_result(conn);
+    MYSQL_ROW row2;
+
+    // Duyệt qua các tệp và thêm vào kết quả phản hồi
+    while ((row2 = mysql_fetch_row(res2)) != NULL) 
+    {
+        if (row2[0] == NULL || row2[1] == NULL) {
+            continue; // Bỏ qua nếu dữ liệu NULL
+        }
+
+        int file_id = atoi(row2[0]); // id tệp
+        char *file_name = row2[1];    // tên tệp
+
+        // Kiểm tra xem có đủ không gian trong response buffer
+        if (strlen(response) + strlen(file_name) + 10 > sizeof(response)) {
+            fprintf(stderr, "Buffer overflow detected in response.\n");
+            send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
+            mysql_free_result(res2);
+            return -1;
+        }
+
+        // Thêm tệp vào phản hồi
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "F&%d&%s||", file_id, file_name);
+    }
+
+    mysql_free_result(res2); // Giải phóng kết quả truy vấn tệp
+
+    // Nếu có thư mục hoặc tệp, gửi kết quả về client
+    if (strlen(response) > 5) // Kiểm tra xem có thư mục hoặc tệp nào không (có '2000 ' ở đầu)
+    {
+        send(client_sock, response, strlen(response), 0);
+    }
+    else
+    {
+        send(client_sock, "4040\r\n", 6, 0); // Không có thư mục hay tệp nào
+    }
+
+    return 2000; // Thành công
+}
 
 // Upload file
 int upload_file(int client_sock, const char *user_id, const char *group_id, const char *data, const char *file_name, const char *file_size, const char *dir_id)

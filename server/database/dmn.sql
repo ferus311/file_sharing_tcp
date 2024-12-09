@@ -17,4 +17,4 @@ INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id, dir_i
 ('gr1_file1.txt', '/uploads/group_1/gr1_file1.txt', 2048, 1, 1, NULL),
 ('gr1_dir1_file1.txt', '/uploads/group_1/gr1_dir1/gr1_dir1_file1.txt', 2048, 1, 1, 1),
 ('gr1_dir1_dir1_file1.txt', '/uploads/group_1/gr1_dir1/gr1_dir1_dir1/gr1_dir1_dir1_file1.txt', 2048, 1, 1, 2),
-('gr1_file2.txt', '/uploads/group_2/gr2_file1.txt', 2048, 1, 1, NULL);
+('gr2_file1.txt', '/uploads/group_2/gr2_file1.txt', 2048, 1, 2, NULL);

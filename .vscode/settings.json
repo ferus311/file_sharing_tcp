@@ -4,7 +4,8 @@
         "buffer.h": "c",
         "db.h": "c",
         "token.h": "c",
-        "mysql.h": "c"
+        "mysql.h": "c",
+        "group.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
