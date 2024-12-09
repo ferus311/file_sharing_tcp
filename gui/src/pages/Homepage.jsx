@@ -1,9 +1,40 @@
 import { useNavigate, Link } from "react-router-dom";
-
+import Group from "../components/Group";
+import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
 
 const Homepage = () => {
 
+    const { token } = useAuth();
+    const [groups, setGroups] = useState([]);
     const navigate = useNavigate();
+
+
+
+    useEffect(() => {
+        const fetchGroups = async () => {
+            try {
+                const response = await window.electronAPI.listGroups(token);
+                if (response.startsWith('2000')) {
+                    const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
+                    const groupArray = data
+                        .split('||') // Tách các nhóm bằng "||"
+                        .map((item) => {
+                            const [id, name] = item.split('&'); // Tách ID và tên nhóm bằng "&"
+                            return { id: parseInt(id, 10), name };
+                        });
+                    setGroups(groupArray);
+                } else {
+                    console.error('Failed to fetch groups:', response);
+                }
+            } catch (error) {
+                console.error('Error fetching groups:', error);
+            }
+        };
+
+        fetchGroups();
+    }, [token]);
+
 
     return (
         <div>
@@ -11,7 +42,7 @@ const Homepage = () => {
                 <div class="container">
                     <div class="page-heading">
                         <div class="page-header-left">
-                            <h1 class="wow fadeInUp" data-wow-delay=".3s">Group's List</h1>
+                            <h1 class="wow fadeInUp" data-wow-delay=".3s">Let's share together!</h1>
                         </div>
                         <div class="breadcrumb-image wow fadeInUp" data-wow-delay=".4s">
                             <img src="assets/img/breadcrumb.png" alt="img" />
@@ -23,186 +54,11 @@ const Homepage = () => {
             <section class="news-section fix section-padding">
                 <div class="container">
                     <div class="row g-4">
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".3s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/01.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Shared Hosting</span>
-                                        <p>MARCH 24, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">Attentive was born in 2015 help sales teams</a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-1.png')" }}></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
+                        {groups.map((group, index) => (
+                            <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.3 + index * 0.2}s`} key={index}>
+                                <Group groupId={group.id} groupName={group.name} />
                             </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".5s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/02.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Uncategorized</span>
-                                        <p>MARCH 22, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">Best and fastest data
-                                            server ever</a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-2.png')" }}
-                                            ></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".7s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/03.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Reseller Hosting</span>
-                                        <p>MARCH 14, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">Life won’t one beast air over above all</a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-3.png')" }}
-                                            ></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".3s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/07.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Shared Hosting</span>
-                                        <p>MARCH 24, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">Hosting Guide Everything You Need to Know</a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-1.png')" }}
-                                            ></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".5s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/08.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Uncategorized</span>
-                                        <p>MARCH 22, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">The Importance of Reliable Hosting for Your Online </a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-2.png')" }}
-                                            ></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".7s">
-                            <div class="news-card-items mt-0 box-shadow">
-                                <div class="news-image">
-                                    <img src="assets/img/news/09.jpg" alt="news-img" />
-                                </div>
-                                <div class="news-content">
-                                    <div class="post-list">
-                                        <span>Reseller Hosting</span>
-                                        <p>MARCH 14, 2024</p>
-                                    </div>
-                                    <h3>
-                                        <a href="news-details.html">Top 10 Hosting Mistakes to Avoid for a Seamless </a>
-                                    </h3>
-                                    <div class="author-items">
-                                        <div class="author-image">
-                                            <div class="author-img bg-cover"
-                                                style={{ backgroundImage: "url('assets/img/news/post-3.png')" }}
-                                            ></div>
-                                            <div class="content">
-                                                <h6>Admin</h6>
-                                                <p>Co, Founder</p>
-                                            </div>
-                                        </div>
-                                        <a href="news-details.html" class="link-btn">
-                                            <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                     <div class="page-nav-wrap pt-5 text-center wow fadeInUp" data-wow-delay=".3s">
                         <ul>

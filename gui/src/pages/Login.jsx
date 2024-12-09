@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-    const { setToken, setUsername } = useAuth();
+    const { login } = useAuth();
     const [username, setName] = useState('');
     const [password, setPassword] = useState('');
     const [responseMessage, setResponseMessage] = useState('');
@@ -16,9 +16,7 @@ const Login = () => {
             setResponseMessage(response);
             if (response.startsWith('2000')) {
                 const tokenValue = response.split(' ')[1];
-                localStorage.setItem('token', tokenValue);
-                setToken(tokenValue);
-                setUsername(username);
+                login(tokenValue, username);
                 navigate('/');
             }
         } catch (error) {

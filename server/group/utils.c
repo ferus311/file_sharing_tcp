@@ -34,7 +34,7 @@ int check_group_exist_by_id(int client_sock, int group_id){
     if (mysql_query(conn, query)) {
         fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
         return -1;
-    } 
+    }
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL) {  // Khong tim thay group
         send(client_sock, "4040\r\n", 6, 0);
@@ -82,5 +82,6 @@ int check_user_exist_by_id(int client_sock, int user_id){
 int get_user_id_by_token(const char *token){
     char user_id[512];
     validate_token(token, user_id);
+    // printf("validate: %d, %s\n", i, user_id);
     return atoi(user_id);
 }

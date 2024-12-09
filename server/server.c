@@ -150,7 +150,6 @@ void parse_message(const char *message, char *command, char *token, char *data)
     if (num_parsed == 2)
     {
         strcpy(data, token);
-        token[0] = '\0';
     }
 }
 

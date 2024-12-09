@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Signup = () => {
+
+    const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,11 +26,13 @@ const Signup = () => {
             const response = await window.electronAPI.signup(username, password, email);
             if (response.startsWith('2000')) {
                 const tokenValue = response.split(' ')[1];
-                localStorage.setItem('token', tokenValue);
+                login(tokenValue, username);
+                navigate('/');
+                
                 setSuccessMessage('Signup successful! Redirecting to login...');
                 setTimeout(() => {
                     setSuccessMessage('');
-                    navigate('/login');
+                    navigate('/');
                 }, 3000); // Chờ 3 giây trước khi chuyển hướng và xóa thông báo
             } else {
                 setErrorMessage('Signup failed. Please try again.');
@@ -80,7 +85,7 @@ const Signup = () => {
                                             required
                                         />
                                     </div>
-                                    <div className="mb-3">
+                                    {/* <div className="mb-3">
                                         <label htmlFor="email" className="form-label">Email</label>
                                         <input
                                             type="email"
@@ -91,7 +96,7 @@ const Signup = () => {
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
                                         />
-                                    </div>
+                                    </div> */}
                                     <div className="mb-3">
                                         <label htmlFor="password" className="form-label">Password</label>
                                         <input
