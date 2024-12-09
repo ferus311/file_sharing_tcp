@@ -65,21 +65,10 @@ int handle_registration(int client_sock, const char *username, const char *passw
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
         return -1;
     }
+
     // Retrieve the user_id of the newly created user
     snprintf(query, sizeof(query), "SELECT user_id FROM users WHERE username = '%s'", username);
-
-    if (mysql_query(conn, query)) {
-        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
-        return -1;
-    }
-
     res = mysql_store_result(conn);
-    if (mysql_num_rows(res) == 0) {
-        send(client_sock, "4040\r\n", 6, 0);  // User not found
-        mysql_free_result(res);
-        return 4040;
-    }
-
     MYSQL_ROW row = mysql_fetch_row(res);
     char token[512];
     create_token(row[0], token);

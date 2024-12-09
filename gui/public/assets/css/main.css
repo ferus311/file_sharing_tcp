@@ -1,5 +1,5 @@
 /*
-Theme Name: ClueHost 
+Theme Name: ClueHost
 Author: ex-coders
 Author URI: https://themeforest.net/user/ex-coders
 Description: ClueHost - Hosting HTML5Template
@@ -142,7 +142,7 @@ button {
 }
 
 input:focus {
-  color: var(--white);
+  color: var(--black);
   outline: none;
 }
 

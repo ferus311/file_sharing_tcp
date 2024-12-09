@@ -10,7 +10,8 @@
 #define TOKEN_EXPIRY 3600 // Thời gian hết hạn token (1 giờ)
 
 // Hàm mã hóa Base64
-char *base64_encode(const unsigned char *input, int length) {
+char *base64_encode(const unsigned char *input, int length)
+{
     BIO *bmem, *b64;
     BUF_MEM *bptr;
 
@@ -32,7 +33,8 @@ char *base64_encode(const unsigned char *input, int length) {
 }
 
 // Hàm giải mã Base64
-unsigned char *base64_decode(const char *input, int length, int *out_len) {
+unsigned char *base64_decode(const char *input, int length, int *out_len)
+{
     BIO *b64, *bmem;
     unsigned char *buffer = (unsigned char *)malloc(length);
     memset(buffer, 0, length);
@@ -48,43 +50,56 @@ unsigned char *base64_decode(const char *input, int length, int *out_len) {
     return buffer;
 }
 
-void create_payload(char *payload, const char *user_id, int expiry) {
+void create_payload(char *payload, const char *user_id, int expiry)
+{
     snprintf(payload, 256, "%s:%ld", user_id, time(NULL) + expiry);
 }
 
-void create_token(const char *user_id, char *token) {
+void create_token(const char *user_id, char *token)
+{
     char payload[256];
     create_payload(payload, user_id, TOKEN_EXPIRY);
-    char *encoded_payload = base64_encode((unsigned char*)payload, strlen(payload));
+    char *encoded_payload = base64_encode((unsigned char *)payload, strlen(payload));
     snprintf(token, 512, "%s", encoded_payload);
     free(encoded_payload);
 }
 
-int validate_token(const char *token, char *user_id) {
+int validate_token(const char *token, char *user_id)
+{
     int decoded_len;
     unsigned char *decoded_payload = base64_decode(token, strlen(token), &decoded_len);
     decoded_payload[decoded_len] = '\0';
 
     // Kiểm tra thời gian hết hạn
-    char *colon_position = strrchr((char*)decoded_payload, ':');
-    if (!colon_position) {
+    char *colon_position = strrchr((char *)decoded_payload, ':');
+    if (!colon_position)
+    {
         free(decoded_payload);
         return 0; // Payload không hợp lệ
     }
 
     time_t exp = atol(colon_position + 1);
-    if (time(NULL) > exp) {
+    if (time(NULL) > exp)
+    {
         free(decoded_payload);
         return 0; // Token đã hết hạn
     }
 
     // Lấy user_id
-    int user_id_len = colon_position - (char*)decoded_payload;
-    strncpy(user_id, (char*)decoded_payload, user_id_len);
+    int user_id_len = colon_position - (char *)decoded_payload;
+    strncpy(user_id, (char *)decoded_payload, user_id_len);
     user_id[user_id_len] = '\0';
 
     free(decoded_payload);
     return 1; // Token hợp lệ
+}
+
+int get_user_id(const char *token)
+{
+    char user_id[512];
+    validate_token(token, user_id);
+    // printf("validate: %d, %s\n", i, user_id);
+    return atoi(user_id);
 }
 
 // int main() {

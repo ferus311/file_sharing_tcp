@@ -79,17 +79,29 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
     }
 
     // Step 2: Create the group
-    int int_user_id = get_user_id_by_token(token);
+    int user_id = get_user_id_by_token(token);
 
-    snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, int_user_id);
-    if (mysql_query(conn, query))
-    {
-        fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
+      snprintf(query, sizeof(query), "INSERT INTO `groups` (group_name, created_by) VALUES ('%s', %d)", group_name, user_id);
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Failed to create group: %s\n", mysql_error(conn));
         return -1;
     }
 
+    // Lấy ID của nhóm vừa tạo
+    int group_id = mysql_insert_id(conn);
+
+    // Thêm người dùng vào nhóm với vai trò admin
+    snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id, role) VALUES (%d, %d, 'admin')", user_id, group_id);
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Failed to add user to group: %s\n", mysql_error(conn));
+        return -1;
+    }
+
+
     // Step 3: Send the response back to the client
-    send_message(client_sock, 2000, NULL);
+    char response[1024];
+    snprintf(response, sizeof(response), "2000 %d\r\n", group_id);
+    send(client_sock, response, strlen(response), 0);
 
     return 2000; // Success
 }

@@ -9,6 +9,8 @@ import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
 import Layout from './components/Layout';
 
+import './style.css'
+
 function App() {
     return (
         <BrowserRouter>

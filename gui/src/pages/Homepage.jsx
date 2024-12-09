@@ -1,16 +1,19 @@
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Button, message } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import Group from "../components/Group";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import CreateGroupModal from "../components/CreateGroupModal"; // Import Modal component
 
 const Homepage = () => {
-
     const { token } = useAuth();
     const [groups, setGroups] = useState([]);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-
-
+    // Fetching groups data
     useEffect(() => {
         const fetchGroups = async () => {
             try {
@@ -35,48 +38,93 @@ const Homepage = () => {
         fetchGroups();
     }, [token]);
 
+    // Hiển thị Modal
+    const showModal = () => {
+        setIsModalVisible(true);
+    };
+
+    // Đóng Modal
+    const handleCancel = () => {
+        setIsModalVisible(false);
+    };
+
+    // Xử lý submit form tạo nhóm
+    const handleCreateGroup = async (values) => {
+        setLoading(true);
+        try {
+            const response = await window.electronAPI.createGroup(token, values.groupName);
+            if (response.startsWith('2000')) {
+                message.success('Group created successfully!');
+                const newGroup = { id: response.split(' ')[1], name: values.groupName };
+                setGroups([...groups, newGroup]);
+                setIsModalVisible(false);
+            } else {
+                message.error('Failed to create group.');
+            }
+        } catch (error) {
+            console.error("Error creating group:", error);
+            message.error('An error occurred while creating the group.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div>
-            <div class="breadcrumb-wrapper bg-cover" style={{ backgroundImage: "url('assets/img/breadcrumb-1.jpg')" }}>
-                <div class="container">
-                    <div class="page-heading">
-                        <div class="page-header-left">
-                            <h1 class="wow fadeInUp" data-wow-delay=".3s">Let's share together!</h1>
+            <div className="breadcrumb-wrapper bg-cover" style={{ backgroundImage: "url('assets/img/breadcrumb-1.jpg')" }}>
+                <div className="container">
+                    <div className="page-heading">
+                        <div className="page-header-left">
+                            <h1 className="wow fadeInUp" data-wow-delay=".3s">Let's share together!</h1>
                         </div>
-                        <div class="breadcrumb-image wow fadeInUp" data-wow-delay=".4s">
+                        <div className="breadcrumb-image wow fadeInUp" data-wow-delay=".4s">
                             <img src="assets/img/breadcrumb.png" alt="img" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <section class="news-section fix section-padding">
-                <div class="container">
-                    <div class="row g-4">
+            <section className="news-section fix section-padding">
+                <div className="container">
+                    <div className="row g-4">
                         {groups.map((group, index) => (
-                            <div class="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.3 + index * 0.2}s`} key={index}>
+                            <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.1 + index * 0.1}s`} key={index}>
                                 <Group groupId={group.id} groupName={group.name} />
                             </div>
                         ))}
                     </div>
-                    <div class="page-nav-wrap pt-5 text-center wow fadeInUp" data-wow-delay=".3s">
+                    <div className="page-nav-wrap pt-5 text-center wow fadeInUp" data-wow-delay=".3s">
                         <ul>
-                            <li><a class="page-numbers icon" href="news-grid.html#"><i
-                                class="fa-solid fa-arrow-left-long"></i></a></li>
-                            <li><a class="page-numbers" href="news-grid.html#">01</a></li>
-                            <li><a class="page-numbers" href="news-grid.html#">02</a></li>
-                            <li><a class="page-numbers" href="news-grid.html#">03</a></li>
-                            <li><a class="page-numbers icon" href="news-grid.html#"><i
-                                class="fa-solid fa-arrow-right-long"></i></a></li>
+                            <li><a className="page-numbers icon" href="news-grid.html#"><i className="fa-solid fa-arrow-left-long"></i></a></li>
+                            <li><a className="page-numbers" href="news-grid.html#">01</a></li>
+                            <li><a className="page-numbers" href="news-grid.html#">02</a></li>
+                            <li><a className="page-numbers" href="news-grid.html#">03</a></li>
+                            <li><a className="page-numbers icon" href="news-grid.html#"><i className="fa-solid fa-arrow-right-long"></i></a></li>
                         </ul>
                     </div>
                 </div>
             </section>
 
+            {/* Nút + để mở Modal */}
+            <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={showModal}
+                size="large"
+                style={{ position: "fixed", bottom: "30px", right: "30px" }}
+            >
+                Create Group
+            </Button>
 
+            {/* Gọi Modal CreateGroupModal */}
+            <CreateGroupModal
+                isModalVisible={isModalVisible}
+                handleCancel={handleCancel}
+                handleCreateGroup={handleCreateGroup}
+                loading={loading}
+            />
         </div>
-    )
-}
+    );
+};
 
 export default Homepage;
