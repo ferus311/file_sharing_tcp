@@ -10,5 +10,5 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
 int handle_list_group(int client_sock, const char *token);
 int handle_list_group_members(int client_sock, const char* token, int group_id);
 int handle_respond_invitation(int client_sock, const char* token, int group_id, const char* approval_status);
-int int handle_approve_join_request(int client_sock, const char* token, int user_id, const char* approval_status);
+int handle_approve_join_request(int client_sock, const char* token, int user_id, const char* approval_status);
 #endif // GROUP_H

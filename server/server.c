@@ -212,7 +212,7 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 2);
         int group_id = atoi(tokens[0]);
         const char *approval_status = tokens[1];
-        handle_respond_invitation(client_sock, token, group_id, approval_status​);
+        handle_respond_invitation(client_sock, token, group_id, approval_status);
     }
     else if (strcmp(command, "APPROVE_JOIN_REQUEST") == 0)
     {
