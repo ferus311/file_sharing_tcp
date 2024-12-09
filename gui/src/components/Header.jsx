@@ -30,7 +30,7 @@ const Header = () => {
                             <div class="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
                                 <div class="offcanvas__logo">
                                     <a href="/">
-                                        <img src="assets/img/logo/black-logo.svg" alt="logo-img" />
+                                        <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
                                     </a>
                                 </div>
                                 <div class="offcanvas__close">
@@ -45,8 +45,8 @@ const Header = () => {
                 </div>
             </div>
 
-            <header className="header-section-1">
-                <div id="header-sticky" className="header-1">
+            <header className="header-section-1" style={{ backgroundColor: '#384BFF' }}>
+                <div id="header-sticky" className="header-1" style={{ backgroundColor: '#384BFF' }}>
                     <div className="container">
                         <div className="mega-menu-wrapper">
                             <div className="header-main">
@@ -56,7 +56,7 @@ const Header = () => {
                                             <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
                                         </a>
                                         <a href="/" className="header-logo-2">
-                                            <img src="assets/img/logo/black-logo.svg" alt="logo-img" />
+                                            <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
                                         </a>
                                     </div>
                                 </div>
@@ -66,39 +66,39 @@ const Header = () => {
                                             <nav id="mobile-menu">
                                                 <ul>
                                                     <li>
-                                                        <Link to="/">Home</Link>
+                                                        <Link to="/" style={{ color: 'white' }}>Home</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/about">About</Link>
+                                                        <Link to="/about" style={{ color: 'white' }}>About</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/services">Services</Link>
+                                                        <Link to="/services" style={{ color: 'white' }}>Services</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/contact">Contact</Link>
+                                                        <Link to="/contact" style={{ color: 'white' }}>Contact</Link>
                                                     </li>
                                                 </ul>
                                             </nav>
                                         </div>
                                     </div>
-                                    <a href="news-grid.html#0" className="search-trigger search-icon">
+                                    <a href="news-grid.html#0" className="search-trigger search-icon" style={{ color: 'white' }}>
                                         <i className="fal fa-search"></i>
                                     </a>
                                     <div className="header__hamburger d-xl-block my-auto">
                                         <div className="sidebar__toggle">
-                                            <i className="fas fa-bars"></i>
+                                            <i className="fas fa-bars" style={{ color: 'white' }}></i>
                                         </div>
                                     </div>
                                     <div className="button">
                                         {token ? (
                                             <Dropdown overlay={menu} trigger={['click']}>
-                                                <span className="user-info theme-btn">
+                                                <span className="user-info theme-btn" style={{ color: 'white' }}>
                                                     Welcome, {username}!
                                                 </span>
                                             </Dropdown>
                                         ) : (
                                             <Link to={"/login"}>
-                                                <a className="theme-btn">
+                                                <a className="theme-btn" style={{ color: 'white' }}>
                                                     Login
                                                     <i className="fa-solid fa-arrow-right-long"></i>
                                                 </a>

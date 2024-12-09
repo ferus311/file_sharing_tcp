@@ -8,8 +8,8 @@ import Signup from './pages/Signup';
 import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
 import Layout from './components/Layout';
-
-import './style.css'
+import GroupDetail from './pages/GroupDetail';
+import './style.css';
 
 function App() {
     return (
@@ -19,6 +19,15 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/log-activity" element={<LogActivity />} />
+
+                    <Route
+                        path="/group/:group_id"
+                        element={
+                            <Layout>
+                                <GroupDetail />
+                            </Layout>
+                        }
+                    />
                     <Route
                         path="/"
                         element={

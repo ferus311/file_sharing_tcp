@@ -3,7 +3,7 @@ import { Button, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import Group from "../components/Group";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import CreateGroupModal from "../components/CreateGroupModal"; // Import Modal component
 
 const Homepage = () => {
@@ -89,7 +89,9 @@ const Homepage = () => {
                     <div className="row g-4">
                         {groups.map((group, index) => (
                             <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.1 + index * 0.1}s`} key={index}>
-                                <Group groupId={group.id} groupName={group.name} />
+                                <Link to={`/group/${group.id}`}>
+                                    <Group groupId={group.id} groupName={group.name} />
+                                </Link>
                             </div>
                         ))}
                     </div>
