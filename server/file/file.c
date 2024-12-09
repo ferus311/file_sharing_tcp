@@ -25,50 +25,102 @@ void send_status(int client_sock, int status_code)
 }
 
 // Liệt kê các file trong thư mục
-int list_directory(int client_sock, const char *group_id, const char *dir_id)
+int handle_list_directory(int client_sock, const char *token, const char *group_id, const char *dir_id)
 {
-    char query[512];
-    snprintf(query, sizeof(query), "SELECT file_name FROM files WHERE group_id = '%s' AND dir_id = '%s'", group_id, dir_id);
+    // // Lấy user_id từ token
+    // int user_id = get_user_id_by_token(token);
+    // if (user_id == -1)
+    // {
+    //     send(client_sock, "4010\r\n", 6, 0); // Token không hợp lệ
+    //     return 4010;  // Mã lỗi nếu không tìm thấy user_id từ token
+    // }
 
-    // Execute the query
+    char query[1024];
+    char response[2048] = "2000 "; // 2000 là mã thành công
+
+    // Nếu dir_id là NULL hoặc không có, liệt kê các thư mục con trong nhóm
+    if (dir_id == NULL || strcmp(dir_id, "") == 0) {
+        // Liệt kê các thư mục gốc trong nhóm
+        snprintf(query, sizeof(query), 
+                 "SELECT dir_id, dir_name FROM directories WHERE group_id = '%s' AND parent_id IS NULL", group_id);
+    } else {
+        // Nếu có dir_id, liệt kê các thư mục con trong thư mục này
+        snprintf(query, sizeof(query), 
+                 "SELECT dir_id, dir_name FROM directories WHERE group_id = '%s' AND parent_id = '%s'", 
+                 group_id, dir_id);
+    }
+
+    // Thực thi câu truy vấn thư mục
     if (mysql_query(conn, query))
     {
-        send_status(client_sock, 5000); // Error in query execution
-        return 5000;                    // Return error code for query failure
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi trong quá trình thực thi truy vấn
+        return 5000;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL)
     {
-        send_status(client_sock, 5000); // Error in storing result
-        return 5000;                    // Return error code for result storage failure
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi lưu kết quả
+        return 5000; 
     }
 
     MYSQL_ROW row;
-    char response[1024] = "";
 
-    // Fetch and concatenate each file name into the response
+    // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
     while ((row = mysql_fetch_row(res)) != NULL)
     {
-        strcat(response, row[0]);
-        strcat(response, "\n");
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "DIR:%s&%s||", row[0], row[1]);
     }
 
-    // Send response back to client
-    if (strlen(response) > 0)
+    mysql_free_result(res); // Giải phóng kết quả truy vấn thư mục
+
+    // Truy vấn các tệp trong thư mục
+    if (dir_id == NULL || strcmp(dir_id, "") == 0) {
+        // Nếu dir_id là NULL, tìm các tệp không có thư mục (dir_id IS NULL)
+        snprintf(query, sizeof(query), 
+                 "SELECT file_id, file_name FROM files WHERE group_id = '%s' AND dir_id IS NULL", group_id);
+    } else {
+        // Nếu có dir_id, tìm các tệp trong thư mục đó
+        snprintf(query, sizeof(query), 
+                 "SELECT file_id, file_name FROM files WHERE group_id = '%s' AND dir_id = '%s'", 
+                 group_id, dir_id);
+    }
+
+    // Thực thi câu truy vấn tệp
+    if (mysql_query(conn, query))
+    {
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi trong quá trình thực thi truy vấn
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL)
+    {
+        send(client_sock, "5000\r\n", 6, 0); // Lỗi lưu kết quả
+        return 5000;
+    }
+
+    // Duyệt qua các file và thêm vào kết quả phản hồi
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        snprintf(response + strlen(response), sizeof(response) - strlen(response), "FILE:%s&%s||", row[0], row[1]);
+    }
+
+    mysql_free_result(res); // Giải phóng kết quả truy vấn tệp
+
+    // Nếu có thư mục hoặc tệp, gửi kết quả về client
+    if (strlen(response) > 5) // Kiểm tra xem có thư mục hoặc tệp nào không (có '2000 ' ở đầu)
     {
         send(client_sock, response, strlen(response), 0);
     }
     else
     {
-        send_status(client_sock, 4040); // No files found
-        mysql_free_result(res);
-        return 4040; // Return code for "No files found"
+        send(client_sock, "4040\r\n", 6, 0); // Không có thư mục hay tệp nào
     }
 
-    mysql_free_result(res);
-    return 2000; // Success code
+    return 2000; // Thành công
 }
+
 
 // Upload file
 int upload_file(int client_sock, const char *user_id, const char *group_id, const char *data, const char *file_name, const char *file_size, const char *dir_id)

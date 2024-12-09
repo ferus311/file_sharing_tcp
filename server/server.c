@@ -238,7 +238,7 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "LIST_DIRECTORY_CONTENT") == 0)
     {
         split(data, "||", tokens, 1);
-        // Handle list directory content with token and directory ID
+        handle_remove_member(client_sock, token, atoi(tokens[0]), atoi(tokens[1]));
     }
     else if (strcmp(command, "UPLOAD_FILE") == 0)
     {
