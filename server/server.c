@@ -199,7 +199,6 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 1);
         int group_id = atoi(tokens[0]);
         handle_request_join_group(client_sock, token, group_id);
-        // Handle request join group with token and group ID
     }
     else if (strcmp(command, "INVITE_USER_TO_GROUP") == 0)
     {
@@ -211,11 +210,16 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
         split(data, "||", tokens, 2);
-        // Handle respond invitation with token, group ID, and approval status
+        int group_id = atoi(tokens[0]);
+        const char *approval_status = tokens[1];
+        handle_respond_invitation(client_sock, token, group_id, approval_status​);
     }
     else if (strcmp(command, "APPROVE_JOIN_REQUEST") == 0)
     {
         split(data, "||", tokens, 2);
+        int user_id = atoi(tokens[0]);
+        const char *approval_status = tokens[1];
+        handle_approve_join_request(client_sock, token, user_id, approval_status);
         // Handle approve join request with token, group ID, and user ID
     }
     else if (strcmp(command, "LEAVE_GROUP") == 0)

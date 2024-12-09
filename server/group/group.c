@@ -86,7 +86,6 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
 }
 
 // Tham gia nhóm
-// FIXME: change token to user_id
 int handle_request_join_group(int client_sock, const char *token, int group_id) {
     char query[512];
     int code;
@@ -119,7 +118,7 @@ int handle_request_join_group(int client_sock, const char *token, int group_id) 
     }
 
     // Step 4: Insert into user_groups
-    snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, %d)", int_user_id, group_id);
+    snprintf(query, sizeof(query), "INSERT INTO group_requests (user_id, group_id, request_type) VALUES (%d, %d, 'join_request')", int_user_id, group_id);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -156,7 +155,7 @@ int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id) {
 
     // Step 5: Insert into user_groups
     // FIXME: Insert into queue
-    snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, %d)", invitee_id, group_id);
+    snprintf(query, sizeof(query), "INSERT INTO group_requests (user_id, group_id, request_type) VALUES (%d, %d, 'invitation')", invitee_id, group_id);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
         return -1;
@@ -263,7 +262,7 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
     return 2000;
 }
 
-// // Liệt kê danh sách nhóm người dùng
+// Liệt kê danh sách nhóm người dùng
 int handle_list_group(int client_sock, const char *token){
     char query[512];
     int user_id = get_user_id_by_token(token);
@@ -322,6 +321,7 @@ int handle_list_group(int client_sock, const char *token){
     return 2000;
 }
 
+// Liệt kê danh sách thành viên nhóm
 int handle_list_group_members(int client_sock, const char* token, int group_id){
     int code;
 
@@ -389,5 +389,109 @@ int handle_list_group_members(int client_sock, const char* token, int group_id){
 
     // Send response to client
     send_message(client_sock, 2000, combined_members);
+    return 2000;
+}
+
+int handle_respond_invitation(int client_sock, const char* token, int group_id, const char* approval_status){
+    char query[512];
+    int code;
+    
+    // Step 1: Check if group_id is existed
+    code = check_group_exist_by_id(client_sock, group_id);
+    if(code){
+        return code;
+    }
+
+    // Step 2: Check if token is existed
+    int int_user_id = get_user_id_by_token(token);
+    code = check_user_exist_by_id(client_sock, int_user_id);
+    if (code) {
+        return code;
+    }
+
+    // Step 3: Check if user_id in group
+    code = check_user_in_group(client_sock, int_user_id, group_id);
+    if (code){
+        return code;
+    }
+
+    // Step 4: Check if approval_status is valid
+    if (strcmp(approval_status, "accepted") != 0 && strcmp(approval_status, "rejected") != 0) {
+        send_message(client_sock, 4000, "Invalid approval status");
+        return 4000;
+    }
+
+    // Step 5: Update the group_requests table based on approval_status
+    if (strcmp(approval_status, "accept") == 0) {
+        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'accepted' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
+    } else {
+        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'rejected' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
+    }
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "UPDATE failed. Error: %s\n", mysql_error(conn));
+        return -1;
+    }
+
+    // Step 6: If accepted, add the user to the group
+    if (strcmp(approval_status, "accept") == 0) {
+        snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, %d)", int_user_id, group_id);
+        if (mysql_query(conn, query)) {
+            fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
+            return -1;
+        }
+    }
+
+    // Step 7: Send the response back to the client
+    send_message(client_sock, 2000, NULL);
+    return 2000;
+}
+
+int handle_approve_join_request(int client_sock, const char* token, int user_id, const char* approval_status){
+    char query[512];
+    int code;
+
+    // Step 1: Check if token is valid and get user_id of the requester
+    int int_user_id = get_user_id_by_token(token);
+    code = check_user_exist_by_id(client_sock, int_user_id);
+    if (code) {
+        return code;
+    }
+
+    // Step 2: Check if user_id exists
+    code = check_user_exist_by_id(client_sock, user_id);
+    if (code) {
+        return code;
+    }
+
+    // Step 3: Check if approval_status is valid
+    if (strcmp(approval_status, "accepted") != 0 && strcmp(approval_status, "rejected") != 0) {
+        send_message(client_sock, 4000, "Invalid approval status");
+        return 4000;
+    }
+
+    // Step 4: Update the group_requests table based on approval_status
+    if (strcmp(approval_status, "accepted") == 0) {
+        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'accepted' WHERE user_id = %d AND request_type = 'join_request'", user_id);
+    } else {
+        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'rejected' WHERE user_id = %d AND request_type = 'join_request'", user_id);
+    }
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "UPDATE failed. Error: %s\n", mysql_error(conn));
+        return -1;
+    }
+
+    // Step 5: If accepted, add the user to the group
+    if (strcmp(approval_status, "accepted") == 0) {
+        snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, (SELECT group_id FROM group_requests WHERE user_id = %d AND request_type = 'join_request'))", user_id, user_id);
+        if (mysql_query(conn, query)) {
+            fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
+            return -1;
+        }
+    }
+
+    // Step 6: Send the response back to the client
+    send_message(client_sock, 2000, NULL);
     return 2000;
 }
