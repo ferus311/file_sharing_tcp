@@ -9,6 +9,7 @@ import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
 import Layout from './components/Layout';
 import GroupDetail from './pages/GroupDetail';
+import { Documents, Members, LeaveGroup } from './pages/GroupDetail';
 import './style.css';
 
 function App() {
@@ -19,7 +20,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/log-activity" element={<LogActivity />} />
-
+                    {/* <Route path="/group-members" element={<GroupMembers/>} /> */}
                     <Route
                         path="/group/:group_id"
                         element={

@@ -89,7 +89,7 @@ const Homepage = () => {
                     <div className="row g-4">
                         {groups.map((group, index) => (
                             <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.1 + index * 0.1}s`} key={index}>
-                                <Link to={`/group/${group.id}`}>
+                                <Link to={`/group/${group.id}`} state={{ groupId: group.id, groupName: group.name }}>
                                     <Group groupId={group.id} groupName={group.name} />
                                 </Link>
                             </div>

@@ -385,6 +385,7 @@ int handle_list_group_members(int client_sock, const char *token, int group_id)
 
     // Step 2 check user in group
     int user_id = get_user_id_by_token(token);
+
     code = check_user_in_group(client_sock, user_id, group_id);
     if (code)
     {
@@ -431,7 +432,7 @@ int handle_list_group_members(int client_sock, const char *token, int group_id)
 
         // Create string in format username&user_id
         char user_entry[256];
-        snprintf(user_entry, sizeof(user_entry), "%s&%d", username, user_id);
+        snprintf(user_entry, sizeof(user_entry), "%d&%s", user_id, username);
 
         // Append to combined_groups with separator ||
         if (strlen(combined_members) > 0)

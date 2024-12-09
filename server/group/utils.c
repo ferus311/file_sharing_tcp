@@ -53,7 +53,7 @@ int check_user_in_group(int client_sock, int user_id, int group_id){
         return -1;
     }
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res != 0){
+    if (res == 0){
         send(client_sock, "4091\r\n", 6, 0);
         // DOCS: sửa mã lỗi
         return 4091;
