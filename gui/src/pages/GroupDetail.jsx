@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 
 const { Sider, Content } = Layout;
 
-const Documents = ({ items }) => (
+const Documents = ({ items, loading, handleItemClick }) => (
     <List
         grid={{ gutter: 16, column: 4 }}
         dataSource={items}
@@ -30,23 +30,57 @@ const Documents = ({ items }) => (
     />
 );
 
-const Members = ({ members }) => (
-    <div className="container">
-        <List
-            itemLayout="horizontal"
-            dataSource={members}
-            renderItem={member => (
-                <List.Item>
-                    <List.Item.Meta
-                        avatar={<Avatar icon={<UserOutlined />} />}
-                        title={<Typography.Text>{member.name}</Typography.Text>}
-                        description={`Member ID: ${member.id}`}
-                    />
-                </List.Item>
-            )}
-        />
-    </div>
-);
+const Members = ({ groupId, token }) => {
+    const [members, setMembers] = useState([]);
+    const parseApiMemberResponse = (response) => {
+        const parts = response.split(' ');
+        if (parts[0] !== '2000') return [];
+        const members = parts[1].split('||').map(member => {
+            const [id, name] = member.split('&');
+            return { id, name };
+        });
+        return members;
+    };
+
+    useEffect(() => {
+        const fetchGroupMembers = async () => {
+            try {
+                const response = await window.electronAPI.listGroupMembers(token, groupId);
+                console.log(response);
+
+                if (response.startsWith('2000')) {
+                    const parsedMembers = parseApiMemberResponse(response);
+                    setMembers(parsedMembers);
+                } else {
+                    console.error('Failed to fetch group members:', response);
+                }
+            } catch (error) {
+                console.error('Error fetching group members:', error);
+            }
+        };
+
+        fetchGroupMembers();
+
+    }, [groupId]);
+
+    return (
+        <div className="container">
+            <List
+                itemLayout="horizontal"
+                dataSource={members}
+                renderItem={member => (
+                    <List.Item>
+                        <List.Item.Meta
+                            avatar={<Avatar icon={<UserOutlined />} />}
+                            title={<Typography.Text>{member.name}</Typography.Text>}
+                            description={`Member ID: ${member.id}`}
+                        />
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+}
 
 const LeaveGroup = () => <div>Leave Group Component</div>;
 
@@ -58,13 +92,15 @@ const GroupDetail = () => {
     const { groupId, groupName } = location.state || {};
     const [currentView, setCurrentView] = useState('documents'); // Trạng thái hiện tại của nội dung
     const [items, setItems] = useState([]);
-    const [members, setMembers] = useState([]);
+
 
     const fetchListGroupContent = async (groupId) => {
         setLoading(true);
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.listGroupContent(cleanToken, groupId);
+            console.log(response);
+
 
             if (response.startsWith('2000')) {
                 let data = response.slice(5).trim();
@@ -91,33 +127,14 @@ const GroupDetail = () => {
     const handleItemClick = (item) => {
         if (item.type === 'D') {
             navigate(`/group/${groupId}/folder/${item.id}`);
-            setCurrentPath(prevPath => [...prevPath, item.name]);
         } else {
             navigate(`/group/${groupId}/file/${item.id}`);
         }
     };
 
     useEffect(() => {
-        
+
         fetchListGroupContent(groupId);
-
-        const fetchGroupMembers = async () => {
-            try {
-                const response = await window.electronAPI.listGroupMembers(token, groupId);
-                console.log(response);
-
-                if (response.startsWith('2000')) {
-                    const parsedMembers = parseApiMemberResponse(response);
-                    setMembers(parsedMembers);
-                } else {
-                    console.error('Failed to fetch group members:', response);
-                }
-            } catch (error) {
-                console.error('Error fetching group members:', error);
-            }
-        };
-
-        fetchGroupMembers();
 
     }, [groupId]);
 
@@ -143,9 +160,9 @@ const GroupDetail = () => {
     const renderContent = () => {
         switch (currentView) {
             case 'documents':
-                return <Documents items={items} />;
+                return <Documents items={items} loading={loading} handleItemClick={handleItemClick} />;
             case 'members':
-                return <Members members={members} />;
+                return <Members groupId={groupId} token={token} />;
             case 'leave':
                 return <LeaveGroup />;
             default:
