@@ -1,34 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Breadcrumb, Typography, Card, List, Avatar, message } from 'antd';
-import { FolderOutlined, FileOutlined, TeamOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { Layout, Menu, Breadcrumb, Typography, Card, List, Avatar, message, Button, Modal, Input, Upload } from 'antd';
+import { FolderOutlined, FileOutlined, TeamOutlined, LogoutOutlined, UserOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './GroupDetail.css';
 import { useAuth } from '../context/AuthContext';
 
 const { Sider, Content } = Layout;
 
-const Documents = ({ items, loading, handleItemClick }) => (
-    <List
-        grid={{ gutter: 16, column: 4 }}
-        dataSource={items}
-        loading={loading}
-        renderItem={item => (
-            <List.Item key={item.id}>
-                <Card
-                    className="custom-card shadow-sm p-3 mb-5 bg-white rounded"
-                    title={item.type === 'D' ? <FolderOutlined className="large-icon" /> : <FileOutlined className="large-icon" />}
-                    onClick={() => handleItemClick(item)}
-                    hoverable
-                >
-                    <Card.Meta
-                        title={item.type === 'D' ? `Directory: ${item.name}` : `File: ${item.name}`}
-                        description={`ID: ${item.id}`}
-                    />
-                </Card>
-            </List.Item>
-        )}
-    />
-);
+const Documents = ({ handleItemClick, groupId, token }) => {
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const fetchListGroupContent = async (groupId) => {
+        setLoading(true);
+        try {
+            const response = await window.electronAPI.listGroupContent(token, groupId);
+            console.log(response);
+
+            if (response.startsWith('2000')) {
+                let data = response.slice(5).trim();
+                if (data.endsWith('||')) data = data.slice(0, -2);
+
+                const dataArray = data.split('||').map(item => {
+                    const [type, id, name] = item.split('&');
+                    return { type, id: parseInt(id, 10), name };
+                });
+
+                setItems(dataArray);
+            } else {
+                console.error('Failed to fetch groups:', response);
+                setItems([]);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchListGroupContent(groupId);
+    }, [groupId]);
+
+    return (
+        <List
+            grid={{ gutter: 16, column: 4 }}
+            dataSource={items}
+            loading={loading}
+            renderItem={item => (
+                <List.Item key={item.id}>
+                    <Card
+                        className="custom-card shadow-sm p-3 mb-5 bg-white rounded"
+                        title={item.type === 'D' ? <FolderOutlined className="large-icon" /> : <FileOutlined className="large-icon" />}
+                        onClick={() => handleItemClick(item)}
+                        hoverable
+                    >
+                        <Card.Meta
+                            title={item.type === 'D' ? `Directory: ${item.name}` : `File: ${item.name}`}
+                            description={`ID: ${item.id}`}
+                        />
+                    </Card>
+                </List.Item>
+            )}
+        />
+    );
+};
 
 const Members = ({ groupId, token }) => {
     const [members, setMembers] = useState([]);
@@ -84,6 +121,7 @@ const Members = ({ groupId, token }) => {
 
 const LeaveGroup = () => <div>Leave Group Component</div>;
 
+
 const GroupDetail = () => {
     const { token } = useAuth();
     const location = useLocation();
@@ -93,35 +131,17 @@ const GroupDetail = () => {
     const [currentView, setCurrentView] = useState('documents'); // Trạng thái hiện tại của nội dung
     const [items, setItems] = useState([]);
 
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
 
-    const fetchListGroupContent = async (groupId) => {
-        setLoading(true);
-        try {
-            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
-            const response = await window.electronAPI.listGroupContent(cleanToken, groupId);
-            console.log(response);
-
-
-            if (response.startsWith('2000')) {
-                let data = response.slice(5).trim();
-                if (data.endsWith('||')) data = data.slice(0, -2);
-
-                const dataArray = data.split('||').map(item => {
-                    const [type, id, name] = item.split('&');
-                    return { type, id: parseInt(id, 10), name };
-                });
-
-                setItems(dataArray);
-            } else {
-                console.error('Failed to fetch groups:', response);
-                setItems([]);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            setItems([]);
-        } finally {
-            setLoading(false);
-        }
+    const parseApiResponse = (response) => {
+        const parts = response.split(' ');
+        if (parts[0] !== '2000') return [];
+        const items = parts[1].split('||').map(item => {
+            const [type, id, name] = item.split('&');
+            return { type, id, name };
+        });
+        return items;
     };
 
     const handleItemClick = (item) => {
@@ -132,35 +152,10 @@ const GroupDetail = () => {
         }
     };
 
-    useEffect(() => {
-
-        fetchListGroupContent(groupId);
-
-    }, [groupId]);
-
-    const parseApiDirResponse = (response) => {
-        const parts = response.split(' ');
-        if (parts[0] !== '2000') return [];
-        return parts[1].split('||').map(item => {
-            const [type, id, name] = item.split('&');
-            return { type, id, name };
-        });
-    };
-
-    const parseApiMemberResponse = (response) => {
-        const parts = response.split(' ');
-        if (parts[0] !== '2000') return [];
-        const members = parts[1].split('||').map(member => {
-            const [id, name] = member.split('&');
-            return { id, name };
-        });
-        return members;
-    };
-
     const renderContent = () => {
         switch (currentView) {
             case 'documents':
-                return <Documents items={items} loading={loading} handleItemClick={handleItemClick} />;
+                return <Documents groupId={groupId} token={token} handleItemClick={handleItemClick} />;
             case 'members':
                 return <Members groupId={groupId} token={token} />;
             case 'leave':
@@ -184,6 +179,94 @@ const GroupDetail = () => {
             message.error('An error occurred while leaving the group.');
         }
     };
+
+    const handleUpload = async ({ file }) => {
+        const CHUNK_SIZE = 1024; // Kích thước mỗi phần tệp
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const fileExtension = file.name.split('.').pop(); // Trích xuất định dạng tệp
+
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const chunkData = e.target.result.split(',')[1]; // Lấy dữ liệu base64 từ kết quả đọc
+                const dataString = `${file.name}||${fileExtension}||${chunkIndex}||${totalChunks}||${chunkData}`;
+
+                try {
+                    const response = await window.electronAPI.uploadFile(token, groupId, dataString);
+                    if (!response.startsWith('2000')) {
+                        throw new Error('Failed to upload chunk');
+                    }
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    message.error('An error occurred while uploading the file.');
+                    return;
+                }
+            };
+            reader.readAsDataURL(chunk);
+            await new Promise(resolve => reader.onloadend = resolve); // Đảm bảo rằng mỗi phần được gửi tuần tự
+        }
+
+        message.success('File uploaded successfully.');
+        // Refresh the list of documents
+        const fetchGroupDetails = async () => {
+            try {
+                const response = await window.electronAPI.getGroupDetails(groupId);
+                if (response.startsWith('2000')) {
+                    const parsedItems = parseApiResponse(response);
+                    setItems(parsedItems);
+                } else {
+                    console.error('Failed to fetch group details:', response);
+                }
+            } catch (error) {
+                console.error('Error fetching group details:', error);
+            }
+        };
+        fetchGroupDetails();
+    };
+
+
+    const handleCreateFolder = async () => {
+        try {
+            setItems([...items, { type: 'D', id: 1, name: newFolderName }]);
+            message.success('Folder created successfully.');
+            setIsModalVisible(false);
+            setNewFolderName('');
+            // const response = await window.electronAPI.createFolder(token, groupId, newFolderName);
+            // if (response.startsWith('2000')) {
+            //     message.success('Folder created successfully.');
+            //     setIsModalVisible(false);
+            //     setNewFolderName('');
+
+            //     setItems(...items, {type: 'D', id: 1, name: newFolderName})
+            //     // Refresh the list of documents
+            //     const fetchGroupDetails = async () => {
+            //         try {
+            //             const response = await window.electronAPI.getGroupDetails(groupId);
+            //             if (response.startsWith('2000')) {
+            //                 const parsedItems = parseApiResponse(response);
+            //                 setItems(parsedItems);
+            //             } else {
+            //                 console.error('Failed to fetch group details:', response);
+            //             }
+            //         } catch (error) {
+            //             console.error('Error fetching group details:', error);
+            //         }
+            //     };
+            //     fetchGroupDetails();
+            // } else {
+            //     message.error('Failed to create folder.');
+            // }
+        } catch (error) {
+            console.error('Error creating folder:', error);
+            message.error('An error occurred while creating the folder.');
+        }
+    };
+
+
     return (
         <Layout style={{ minHeight: '100vh', paddingTop: '100px' }}>
             <Sider width={200} style={{ background: 'white' }}>
@@ -211,9 +294,30 @@ const GroupDetail = () => {
                     <Breadcrumb.Item>Home</Breadcrumb.Item>
                     <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
                 </Breadcrumb>
+                <div style={{ marginBottom: '16px', display: 'flex', }}>
+                    <Upload customRequest={handleUpload}>
+                        <Button icon={<UploadOutlined />}>Upload File</Button>
+                    </Upload>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)} style={{ marginLeft: '8px' }}>
+                        Create Folder
+                    </Button>
+                </div>
+
                 <Content style={{ padding: 24 }}>
                     {renderContent()}
                 </Content>
+                <Modal
+                    title="Create New Folder"
+                    visible={isModalVisible}
+                    onOk={handleCreateFolder}
+                    onCancel={() => setIsModalVisible(false)}
+                >
+                    <Input
+                        placeholder="Enter folder name"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                    />
+                </Modal>
             </Layout>
         </Layout>
     );

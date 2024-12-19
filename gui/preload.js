@@ -31,5 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('list-directory-content', token, groupId, directoryId),
     listGroupContent: (token, groupId) =>
         ipcRenderer.invoke('list-group-content', token, groupId),
-    
+    uploadFile: (token, groupId, dataString) =>
+        ipcRenderer.invoke('upload-file', token, groupId, dataString),
+    createFolder: (token, groupId, folderName) =>
+        ipcRenderer.invoke('create-folder', token, groupId, folderName),
 });

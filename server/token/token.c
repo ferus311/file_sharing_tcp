@@ -98,7 +98,6 @@ int get_user_id(const char *token)
 {
     char user_id[512];
     validate_token(token, user_id);
-    // printf("validate: %d, %s\n", i, user_id);
     return atoi(user_id);
 }
 

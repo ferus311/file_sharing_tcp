@@ -15,7 +15,7 @@ const Login = () => {
             const response = await window.electronAPI.login(username, password);
             setResponseMessage(response);
             if (response.startsWith('2000')) {
-                const tokenValue = response.split(' ')[1];
+                const tokenValue = response.split(' ')[1].replace(/\n/g, '').replace(/\r/g, '');
                 login(tokenValue, username);
                 navigate('/');
             }
