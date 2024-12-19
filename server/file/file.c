@@ -8,12 +8,16 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <mysql/mysql.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
 #include "../group/utils.h"
 #include "file.h"
 #include "../database/db.h"
 
 #define BUFFER_SIZE 1024
+#define FILE_PATH_SIZE 2048
+
 
 extern MYSQL *conn; // Sử dụng kết nối MySQL toàn cục từ db.h
 
@@ -31,7 +35,7 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     char response[2048] = "2000 "; // Mã thành công
 
     // Liệt kê các thư mục gốc trong nhóm
-    snprintf(query, sizeof(query), 
+    snprintf(query, sizeof(query),
              "SELECT dir_id, dir_name FROM directories WHERE group_id = %d AND parent_id IS NULL", group_id);
 
     // Thực thi câu truy vấn thư mục
@@ -46,7 +50,7 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     MYSQL_ROW row;
 
     // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
-    while ((row = mysql_fetch_row(res)) != NULL) 
+    while ((row = mysql_fetch_row(res)) != NULL)
     {
         if (row[0] == NULL || row[1] == NULL) {
             continue; // Bỏ qua nếu dữ liệu NULL
@@ -70,7 +74,7 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     mysql_free_result(res); // Giải phóng kết quả truy vấn thư mục
 
     // Truy vấn các tệp trong nhóm (không phân biệt theo thư mục)
-    snprintf(query, sizeof(query), 
+    snprintf(query, sizeof(query),
              "SELECT file_id, file_name FROM files WHERE group_id = %d AND dir_id IS NULL", group_id);
 
     // Log câu truy vấn SQL cho tệp
@@ -86,7 +90,7 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     MYSQL_ROW row2;
 
     // Duyệt qua các tệp và thêm vào kết quả phản hồi
-    while ((row2 = mysql_fetch_row(res2)) != NULL) 
+    while ((row2 = mysql_fetch_row(res2)) != NULL)
     {
         if (row2[0] == NULL || row2[1] == NULL) {
             continue; // Bỏ qua nếu dữ liệu NULL
@@ -128,7 +132,7 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     char response[2048] = "2000 "; // Mã thành công
 
     // Liệt kê các thư mục gốc trong nhóm
-    snprintf(query, sizeof(query), 
+    snprintf(query, sizeof(query),
              "SELECT dir_id, dir_name FROM directories WHERE group_id = %d AND parent_id = %d", group_id, dir_id);
 
     // Thực thi câu truy vấn thư mục
@@ -143,7 +147,7 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     MYSQL_ROW row;
 
     // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
-    while ((row = mysql_fetch_row(res)) != NULL) 
+    while ((row = mysql_fetch_row(res)) != NULL)
     {
         if (row[0] == NULL || row[1] == NULL) {
             continue; // Bỏ qua nếu dữ liệu NULL
@@ -167,7 +171,7 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     mysql_free_result(res); // Giải phóng kết quả truy vấn thư mục
 
     // Truy vấn các tệp trong nhóm (không phân biệt theo thư mục)
-    snprintf(query, sizeof(query), 
+    snprintf(query, sizeof(query),
              "SELECT file_id, file_name FROM files WHERE group_id = %d AND dir_id = %d", group_id, dir_id);
 
     // Log câu truy vấn SQL cho tệp
@@ -183,7 +187,7 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     MYSQL_ROW row2;
 
     // Duyệt qua các tệp và thêm vào kết quả phản hồi
-    while ((row2 = mysql_fetch_row(res2)) != NULL) 
+    while ((row2 = mysql_fetch_row(res2)) != NULL)
     {
         if (row2[0] == NULL || row2[1] == NULL) {
             continue; // Bỏ qua nếu dữ liệu NULL
@@ -482,4 +486,96 @@ int move_file(int client_sock, const char *user_id, const char *item_id, const c
 
     send_status(client_sock, 5000); // Lỗi di chuyển
     return -1;
+}
+
+
+
+int calcDecodeLength(const char *b64input, size_t len) {
+    int padding = 0;
+
+    if (len >= 2 && b64input[len - 1] == '=' && b64input[len - 2] == '=')
+        padding = 2;
+    else if (len >= 1 && b64input[len - 1] == '=')
+        padding = 1;
+
+    return (int)(len * 0.75) - padding;
+}
+
+unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *output_length) {
+    BIO *bio, *b64;
+
+    int decodeLen = calcDecodeLength(data, input_length);
+    unsigned char *buffer = (unsigned char *)malloc(decodeLen + 1);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        return NULL;
+    }
+    buffer[decodeLen] = '\0'; // Ensure null-terminated
+
+    bio = BIO_new_mem_buf((void *)data, -1);
+    b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // No newlines
+    bio = BIO_push(b64, bio);
+
+    *output_length = BIO_read(bio, buffer, input_length);
+    if (*output_length <= 0) {
+        perror("BIO_read failed");
+        free(buffer);
+        buffer = NULL;
+    }
+
+    BIO_free_all(bio);
+    return buffer;
+}
+
+void handle_receive_file_chunk(int client_sock, const char *token, int group_id, const char *data) {
+    char file_name[BUFFER_SIZE];
+    char file_extension[BUFFER_SIZE];
+    int chunk_index, total_chunks;
+    char chunk_data[BUFFER_SIZE * 4]; // Increased size for base64 data
+
+    // Parse data
+    sscanf(data, "%1023[^|]||%1023[^|]||%d||%d||%4100s", file_name, file_extension, &chunk_index, &total_chunks, chunk_data);
+
+    // Debug: Print parsed data
+    printf("Received chunk: file_name=%s, file_extension=%s, chunk_index=%d, total_chunks=%d\n", file_name, file_extension, chunk_index, total_chunks);
+
+    // Decode base64
+    size_t decoded_length;
+    unsigned char *decoded_data = base64_decode_v2(chunk_data, strlen(chunk_data), &decoded_length);
+
+    // Debug: Print decoded data length
+    printf("Decoded data length: %zu\n", decoded_length);
+
+    // Create directory if not exists
+    char group_folder[FILE_PATH_SIZE];
+    snprintf(group_folder, sizeof(group_folder), "uploads/group_%d", group_id);
+    mkdir(group_folder, 0777);
+
+    // File path
+    char file_path[FILE_PATH_SIZE];
+    snprintf(file_path, sizeof(file_path), "%s/%s", group_folder, file_name);
+
+    // Debug: Print file path
+    printf("File path: %s\n", file_path);
+
+    // Open file in append mode
+    FILE *file = fopen(file_path, "ab");
+    if (file == NULL) {
+        perror("Failed to open file");
+        free(decoded_data);
+        return;
+    }
+
+    fwrite(decoded_data, 1, decoded_length, file);
+    fclose(file);
+    free(decoded_data);
+
+    if (chunk_index == total_chunks - 1) {
+        printf("File received successfully: %s\n", file_path);
+        send(client_sock, "2000 File uploaded successfully", strlen("2000 File uploaded successfully"), 0);
+    } else {
+        printf("Chunk %d of %d uploaded successfully\n", chunk_index, total_chunks);
+        send(client_sock, "2000 Chunk uploaded successfully", strlen("2000 Chunk uploaded successfully"), 0);
+    }
 }

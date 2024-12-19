@@ -10,5 +10,6 @@ int rename_file(int client_sock, const char *user_id, const char *item_id, const
 int delete_file(int client_sock, const char *user_id, const char *item_id, const char *item_type);
 int copy_file(int client_sock, const char *user_id, const char *item_id, const char *target_directory_id);
 int move_file(int client_sock, const char *user_id, const char *item_id, const char *target_directory_id);
+void handle_receive_file_chunk(int client_sock, const char *token, int group_id, const char *data);
 
 #endif // FILE_H

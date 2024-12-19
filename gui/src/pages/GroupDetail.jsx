@@ -194,7 +194,7 @@ const GroupDetail = () => {
             reader.onload = async (e) => {
                 const chunkData = e.target.result.split(',')[1]; // Lấy dữ liệu base64 từ kết quả đọc
                 const dataString = `${file.name}||${fileExtension}||${chunkIndex}||${totalChunks}||${chunkData}`;
-
+                message.info(`Uploading chunk ${chunkIndex + 1} of ${totalChunks}`);
                 try {
                     const response = await window.electronAPI.uploadFile(token, groupId, dataString);
                     if (!response.startsWith('2000')) {
