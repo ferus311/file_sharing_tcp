@@ -157,6 +157,106 @@ int handle_request_join_group(int client_sock, const char *token, int group_id)
     return 2000;
 }
 
+int handle_list_requests(int client_sock, const char *token, int group_id) {
+    char query[512];
+    int user_id = get_user_id_by_token(token); // Lấy user_id từ token
+
+    // Validate token and user_id
+    if (user_id <= 0) {
+        send_message(client_sock, 4030, NULL); // "Invalid or expired token"
+        return 4030;
+    }
+
+    // Step 1: Check if the user is the creator of the group
+    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        return 5000;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        return 5000;
+    }
+
+    if (mysql_num_rows(res) == 0) {
+        send_message(client_sock, 4040, NULL); // "Group not found"
+        mysql_free_result(res);
+        return 4040;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int created_by = atoi(row[0]); // Lấy user_id của admin nhóm
+    mysql_free_result(res);
+
+    if (created_by != user_id) {
+        send_message(client_sock, 4030, NULL); // "Permission denied: You are not the creator of this group"
+        return 4030;
+    }
+
+    // Step 2: Query the list of requests
+    snprintf(query, sizeof(query),
+             "SELECT r.request_id, u.username, r.request_type, r.status, r.created_at "
+             "FROM group_requests r "
+             "JOIN users u ON r.user_id = u.user_id "
+             "WHERE r.group_id = %d", group_id);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "SELECT requests failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch requests"
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch requests"
+        return 5000;
+    }
+
+    int num_rows = mysql_num_rows(res);
+    if (num_rows == 0) {
+        send_message(client_sock, 2000, NULL); // No requests found
+        mysql_free_result(res);
+        return 2000;
+    }
+
+    // Step 3: Build the response
+    char response[2048] = "";
+    MYSQL_ROW req_row;
+
+    while ((req_row = mysql_fetch_row(res))) {
+        char temp[512];
+        int request_id = atoi(req_row[0]);
+        char *username = req_row[1];
+        char *request_type = req_row[2];
+        char *status = req_row[3];
+        char *created_at = req_row[4];
+
+        snprintf(temp, sizeof(temp), "%d&%s&%s&%s&%s||",
+                 request_id, username, request_type, status, created_at);
+        strncat(response, temp, sizeof(response) - strlen(response) - 1);
+    }
+
+    mysql_free_result(res);
+
+    // Step 4: Remove trailing "||" if present
+    int len = strlen(response);
+    if (len > 2 && response[len - 2] == '|' && response[len - 1] == '|') {
+        response[len - 2] = '\0';
+    }
+
+    // Step 5: Send the response back to the client
+    send_message(client_sock, 2000, response);
+    return 2000;
+}
+
+
+
 // Mời người dùng vào nhóm
 int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id)
 {
@@ -511,11 +611,11 @@ int handle_respond_invitation(int client_sock, const char *token, int group_id, 
     // Step 5: Update the group_requests table based on approval_status
     if (strcmp(approval_status, "accept") == 0)
     {
-        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'accepted' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
+        snprintf(query, sizeof(query), "UPDATE group_requests SET status = 'accepted' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
     }
     else
     {
-        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'rejected' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
+        snprintf(query, sizeof(query), "UPDATE group_requests SET status = 'rejected' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
     }
 
     if (mysql_query(conn, query))
@@ -540,61 +640,112 @@ int handle_respond_invitation(int client_sock, const char *token, int group_id, 
     return 2000;
 }
 
-int handle_approve_join_request(int client_sock, const char *token, int user_id, const char *approval_status)
+int handle_approve_join_request(int client_sock, const char *token, int request_id, const char *approval_status)
 {
     char query[512];
-    int code;
+    int user_id = get_user_id_by_token(token);
 
-    // Step 1: Check if token is valid and get user_id of the requester
-    int int_user_id = get_user_id_by_token(token);
-    code = check_user_exist_by_id(client_sock, int_user_id);
-    if (code)
+    // Step 1: Validate user_id
+    if (user_id <= 0)
     {
-        return code;
+        send_message(client_sock, 4030, NULL);//"Invalid or expired token"
+        return 4030;
     }
 
-    // Step 2: Check if user_id exists
-    code = check_user_exist_by_id(client_sock, user_id);
-    if (code)
-    {
-        return code;
-    }
-
-    // Step 3: Check if approval_status is valid
+    // Step 2: Validate approval_status
     if (strcmp(approval_status, "accepted") != 0 && strcmp(approval_status, "rejected") != 0)
     {
-        send_message(client_sock, 4000, "Invalid approval status");
+        send_message(client_sock, 4000, NULL); //"Invalid approval status"
         return 4000;
     }
 
-    // Step 4: Update the group_requests table based on approval_status
-    if (strcmp(approval_status, "accepted") == 0)
+    // Step 3: Check if the request exists and fetch group_id
+    snprintf(query, sizeof(query), "SELECT group_id, request_type, status FROM group_requests WHERE request_id = %d", request_id);
+
+    if (mysql_query(conn, query))
     {
-        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'accepted' WHERE user_id = %d AND request_type = 'join_request'", user_id);
+        fprintf(stderr, "SELECT group_id failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL);//"Failed to fetch group ID"
+        return 5000;
     }
-    else
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
     {
-        snprintf(query, sizeof(query), "UPDATE group_requests SET request_status = 'rejected' WHERE user_id = %d AND request_type = 'join_request'", user_id);
+        send_message(client_sock, 4040, NULL);//"Request not found"
+        if (res)
+            mysql_free_result(res);
+        return 4040;
     }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int group_id = atoi(row[0]);
+    const char *request_type = row[1];
+    const char *request_status = row[2];
+    mysql_free_result(res);
+
+    // Step 4: Ensure the user_id is the creator of the group
+    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL);//"Failed to fetch group creator"
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_message(client_sock, 4040, NULL);//"Group not found"
+        if (res)
+            mysql_free_result(res);
+        return 4040;
+    }
+
+    row = mysql_fetch_row(res);
+    int created_by = atoi(row[0]);
+    mysql_free_result(res);
+
+    if (created_by != user_id)
+    {
+        send_message(client_sock, 4030, NULL);//"Permission denied: You are not the creator of this group"
+        return 4030;
+    }
+
+    // Step 5: Ensure the request is still pending
+    if (strcmp(request_status, "pending") != 0)
+    {
+        send_message(client_sock, 4001, NULL);//"Request is no longer pending"
+        return 4001;
+    }
+
+    // Step 6: Update the request status
+    snprintf(query, sizeof(query), "UPDATE group_requests SET status = '%s' WHERE request_id = %d", approval_status, request_id);
 
     if (mysql_query(conn, query))
     {
         fprintf(stderr, "UPDATE failed. Error: %s\n", mysql_error(conn));
-        return -1;
+        send_message(client_sock, 5000, NULL);//"Failed to update request status"
+        return 5000;
     }
 
-    // Step 5: If accepted, add the user to the group
-    if (strcmp(approval_status, "accepted") == 0)
+    // Step 7: If accepted, add the user to the group
+    if (strcmp(approval_status, "accepted") == 0 && strcmp(request_type, "join_request") == 0)
     {
-        snprintf(query, sizeof(query), "INSERT INTO user_groups (user_id, group_id) VALUES (%d, (SELECT group_id FROM group_requests WHERE user_id = %d AND request_type = 'join_request'))", user_id, user_id);
+        snprintf(query, sizeof(query),
+                 "INSERT INTO user_groups (user_id, group_id) "
+                 "SELECT user_id, group_id FROM group_requests WHERE request_id = %d", request_id);
+
         if (mysql_query(conn, query))
         {
             fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
-            return -1;
+            send_message(client_sock, 5000, NULL);//"Failed to add user to group"
+            return 5000;
         }
     }
 
-    // Step 6: Send the response back to the client
-    send_message(client_sock, 2000, NULL);
+    // Step 8: Send success response
+    send_message(client_sock, 2000, NULL);//"Request processed successfully"
     return 2000;
 }
