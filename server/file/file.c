@@ -354,41 +354,133 @@ int rename_file(int client_sock, const char *user_id, const char *item_id, const
 }
 
 // Xóa file
-int delete_file(int client_sock, const char *user_id, const char *item_id, const char *item_type)
+int handle_delete_file(int client_sock, const char *token, int file_id)
 {
     char query[512];
-    snprintf(query, sizeof(query), "SELECT file_path FROM files WHERE file_id = %s", item_id);
+    int user_id = get_user_id_by_token(token);
 
-    if (mysql_query(conn, query))
-    {
-        send_status(client_sock, 5000); // Lỗi truy vấn
+    // Truy vấn file để lấy thông tin file_path, uploaded_by và group_id
+    snprintf(query, sizeof(query), "SELECT file_path, uploaded_by, group_id FROM files WHERE file_id = %d", file_id);
+
+    if (mysql_query(conn, query)) {
+        send_status(client_sock, 5000); // Lỗi truy vấn SQL
         return -1;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0)
-    {
+    if (res == NULL || mysql_num_rows(res) == 0) {
         send_status(client_sock, 4040); // File không tồn tại
         mysql_free_result(res);
         return -1;
     }
 
     MYSQL_ROW row = mysql_fetch_row(res);
-    char file_path[256];
+    char file_path[500];
+    // int uploaded_by = atoi(row[1]);
+    int group_id = atoi(row[2]);
     snprintf(file_path, sizeof(file_path), "%s", row[0]);
     mysql_free_result(res);
 
-    if (remove(file_path) == 0)
-    {
-        snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %s", item_id);
-        if (mysql_query(conn, query) == 0)
-        {
-            send_status(client_sock, 2000); // Thành công
-            return 0;
-        }
+    // Kiểm tra quyền: tìm created_by trong bảng groups
+    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+    if (mysql_query(conn, query)) {
+        send_status(client_sock, 5000); // Lỗi truy vấn SQL
+        return -1;
     }
 
-    send_status(client_sock, 5000); // Lỗi xóa file
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0) {
+        send_status(client_sock, 4040); // Group không tồn tại
+        mysql_free_result(res);
+        return -1;
+    }
+
+    row = mysql_fetch_row(res);
+    int created_by = atoi(row[0]);
+    mysql_free_result(res);
+
+    // Kiểm tra quyền xóa file: user_id phải là uploaded_by hoặc created_by
+    if (user_id != created_by) {
+        send_status(client_sock, 4030); // Không có quyền xóa file
+        return -1;
+    }
+
+    // Xóa file trong hệ thống
+    // if (remove(file_path) != 0) {
+    //     send_status(client_sock, 5000); // Lỗi xóa file trong hệ thống
+    //     return -1;
+    // }
+
+    // Xóa file trong cơ sở dữ liệu
+    snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %d", file_id);
+    if (mysql_query(conn, query) == 0) {
+        send_status(client_sock, 2000); // Xóa file thành công
+        return 0;
+    }
+
+    send_status(client_sock, 5000); // Lỗi xóa file trong database
+    return -1;
+}
+
+// Xóa thư mục
+int handle_delete_dir(int client_sock, const char *token, int dir_id) {
+    char query[512];
+    int user_id = get_user_id_by_token(token);
+
+    // Truy vấn để lấy thông tin `created_by` và `group_id` của thư mục
+    snprintf(query, sizeof(query), "SELECT created_by, group_id FROM directories WHERE dir_id = %d", dir_id);
+
+    if (mysql_query(conn, query)) {
+        send_status(client_sock, 5000); // Lỗi truy vấn SQL
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0) {
+        send_status(client_sock, 4040); // Thư mục không tồn tại
+        mysql_free_result(res);
+        return -1;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    // int dir_created_by = atoi(row[0]); // Người tạo thư mục
+    int group_id = atoi(row[1]);       // group_id chứa thư mục
+    mysql_free_result(res);
+
+    // Truy vấn `created_by` của nhóm để xác định người tạo nhóm
+    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+
+    if (mysql_query(conn, query)) {
+        send_status(client_sock, 5000); // Lỗi truy vấn SQL
+        return -1;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0) {
+        send_status(client_sock, 4040); // Nhóm không tồn tại
+        mysql_free_result(res);
+        return -1;
+    }
+
+    row = mysql_fetch_row(res);
+    int group_created_by = atoi(row[0]); // Người tạo nhóm
+    mysql_free_result(res);
+
+    // Kiểm tra quyền xóa: user_id phải là dir_created_by hoặc group_created_by
+    if (user_id != group_created_by) {
+        send_status(client_sock, 4030); // Không có quyền xóa thư mục
+        return -1;
+    }
+
+    // Xóa thư mục khỏi bảng directories
+    snprintf(query, sizeof(query), "DELETE FROM directories WHERE dir_id = %d", dir_id);
+
+    if (mysql_query(conn, query) == 0) {
+        send_status(client_sock, 2000); // Xóa thư mục thành công
+        return 0;
+    }
+
+    send_status(client_sock, 5000); // Lỗi xóa thư mục trong database
     return -1;
 }
 

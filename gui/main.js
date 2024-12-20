@@ -59,6 +59,12 @@ ipcMain.handle('signup', async (event, username, password) => {
     return connectionManager.sendMessage(message);
 });
 
+ipcMain.handle('check-admin', async (event, token, groupId) => {
+    await connectionManager.connect();
+    const message = `CHECK_ADMIN ${token} ${groupId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
 ipcMain.handle('create-group', async (event, token, groupName) => {
     await connectionManager.connect();
     const message = `CREATE_GROUP ${token} ${groupName}\r\n`;
@@ -74,6 +80,12 @@ ipcMain.handle('list-groups', async (event, token) => {
 ipcMain.handle('list-group-members', async (event, token, groupId) => {
     await connectionManager.connect();
     const message = `LIST_GROUP_MEMBERS ${token} ${groupId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('list-requests', async (event, token, groupId) => {
+    await connectionManager.connect();
+    const message = `LIST_REQUESTS ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
@@ -97,19 +109,19 @@ ipcMain.handle('leave-group', async (event, token, groupId) => {
 
 ipcMain.handle('delete-group', async (event, token, groupId) => {
     await connectionManager.connect();
-    const message = `DELETE_GROUP ${token}||${groupId}\r\n`;
+    const message = `DELETE_GROUP ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
 ipcMain.handle('respond-invitation', async (event, token, groupId, approvalStatus) => {
     await connectionManager.connect();
-    const message = `RESPOND_INVITATION ${token}||${groupId}||${approvalStatus}\r\n`;
+    const message = `RESPOND_INVITATION ${token} ${groupId}||${approvalStatus}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('approve-join-request', async (event, token, groupId, userId) => {
+ipcMain.handle('approve-join-request', async (event, token, requestId, status) => {
     await connectionManager.connect();
-    const message = `APPROVE_JOIN_REQUEST ${token}||${groupId}||${userId}\r\n`;
+    const message = `APPROVE_JOIN_REQUEST ${token} ${requestId}||${status}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
@@ -121,13 +133,26 @@ ipcMain.handle('remove-member', async (event, token, groupId, userId) => {
 
 ipcMain.handle('list-directory-content', async (event, token, groupId, directoryId) => {
     await connectionManager.connect();
-    const message = `LIST_DIRECTORY_CONTENT ${token}||${groupId}||${directoryId}\r\n`;
+    const message = `LIST_DIRECTORY_CONTENT ${token} ${groupId}||${directoryId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
 ipcMain.handle('list-group-content', async (event, token, groupId) => {
     await connectionManager.connect();
-    const message = `LIST_GROUP_CONTENT ${token}||${groupId}\r\n`;
+    const message = `LIST_GROUP_CONTENT ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
 });
+
+ipcMain.handle('delete-file', async (event, token, fileId) => {
+    await connectionManager.connect();
+    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('delete-dir', async (event, token, dirId) => {
+    await connectionManager.connect();
+    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
 

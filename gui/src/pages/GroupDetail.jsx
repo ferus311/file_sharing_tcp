@@ -1,175 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Breadcrumb, Typography, Card, List, Avatar, message } from 'antd';
-import { FolderOutlined, FileOutlined, TeamOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { Layout, Menu, Breadcrumb, message} from 'antd';
+import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './GroupDetail.css';
 import { useAuth } from '../context/AuthContext';
+import Documents from '../pages/group/Documents';
+import Members from '../pages/group/Members';
+import Requests from '../pages/group/Requests';
 
 const { Sider, Content } = Layout;
-
-const Documents = ({ items, loading, handleItemClick }) => (
-    <List
-        grid={{ gutter: 16, column: 4 }}
-        dataSource={items}
-        loading={loading}
-        renderItem={item => (
-            <List.Item key={item.id}>
-                <Card
-                    className="custom-card shadow-sm p-3 mb-5 bg-white rounded"
-                    title={item.type === 'D' ? <FolderOutlined className="large-icon" /> : <FileOutlined className="large-icon" />}
-                    onClick={() => handleItemClick(item)}
-                    hoverable
-                >
-                    <Card.Meta
-                        title={item.type === 'D' ? `Directory: ${item.name}` : `File: ${item.name}`}
-                        description={`ID: ${item.id}`}
-                    />
-                </Card>
-            </List.Item>
-        )}
-    />
-);
-
-const Members = ({ groupId, token }) => {
-    const [members, setMembers] = useState([]);
-    const parseApiMemberResponse = (response) => {
-        const parts = response.split(' ');
-        if (parts[0] !== '2000') return [];
-        const members = parts[1].split('||').map(member => {
-            const [id, name] = member.split('&');
-            return { id, name };
-        });
-        return members;
-    };
-
-    useEffect(() => {
-        const fetchGroupMembers = async () => {
-            try {
-                const response = await window.electronAPI.listGroupMembers(token, groupId);
-                console.log(response);
-
-                if (response.startsWith('2000')) {
-                    const parsedMembers = parseApiMemberResponse(response);
-                    setMembers(parsedMembers);
-                } else {
-                    console.error('Failed to fetch group members:', response);
-                }
-            } catch (error) {
-                console.error('Error fetching group members:', error);
-            }
-        };
-
-        fetchGroupMembers();
-
-    }, [groupId]);
-
-    return (
-        <div className="container">
-            <List
-                itemLayout="horizontal"
-                dataSource={members}
-                renderItem={member => (
-                    <List.Item>
-                        <List.Item.Meta
-                            avatar={<Avatar icon={<UserOutlined />} />}
-                            title={<Typography.Text>{member.name}</Typography.Text>}
-                            description={`Member ID: ${member.id}`}
-                        />
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-}
+message.config({
+    top: 80, // Cách mép trên cùng 80px
+    duration: 2, // Thời gian hiển thị mặc định 2 giây
+    maxCount: 3, // Số lượng message tối đa hiển thị cùng lúc
+});
 
 const LeaveGroup = () => <div>Leave Group Component</div>;
 
 const GroupDetail = () => {
     const { token } = useAuth();
     const location = useLocation();
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
     const { groupId, groupName } = location.state || {};
     const [currentView, setCurrentView] = useState('documents'); // Trạng thái hiện tại của nội dung
-    const [items, setItems] = useState([]);
+    const navigate = useNavigate();
 
+    const [reFetch, setReFetch] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(0);
 
-    const fetchListGroupContent = async (groupId) => {
-        setLoading(true);
+    const parseApiCheckAdmin = (response) => {
+        const parts = response.split(' ');
+        if (parts[0] !== '2000') return [];
+        const result = parseInt(parts[1], 10);
+        return result;
+    };
+
+    const fetchCheckAdmin = async () => {
+        console.log("----------Start fetchCheckAdmin-----------")
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
-            const response = await window.electronAPI.listGroupContent(cleanToken, groupId);
-            console.log(response);
-
-
-            if (response.startsWith('2000')) {
-                let data = response.slice(5).trim();
-                if (data.endsWith('||')) data = data.slice(0, -2);
-
-                const dataArray = data.split('||').map(item => {
-                    const [type, id, name] = item.split('&');
-                    return { type, id: parseInt(id, 10), name };
-                });
-
-                setItems(dataArray);
+            const response2 = await window.electronAPI.checkAdmin(cleanToken, groupId);
+            console.log("fetchCheckAdmin: " + response2);
+            setReFetch(false)
+            if (response2.startsWith('2000')) {
+                const result = parseApiCheckAdmin(response2);
+                setIsAdmin(result);
             } else {
-                console.error('Failed to fetch groups:', response);
-                setItems([]);
+                console.error('Failed to fetch group members:', response2);
             }
         } catch (error) {
-            console.error('Error:', error);
-            setItems([]);
-        } finally {
-            setLoading(false);
+            console.error('Error fetching group members:', error);
         }
     };
 
-    const handleItemClick = (item) => {
-        if (item.type === 'D') {
-            navigate(`/group/${groupId}/folder/${item.id}`);
-        } else {
-            navigate(`/group/${groupId}/file/${item.id}`);
-        }
-    };
 
     useEffect(() => {
-
-        fetchListGroupContent(groupId);
-
-    }, [groupId]);
-
-    const parseApiDirResponse = (response) => {
-        const parts = response.split(' ');
-        if (parts[0] !== '2000') return [];
-        return parts[1].split('||').map(item => {
-            const [type, id, name] = item.split('&');
-            return { type, id, name };
-        });
-    };
-
-    const parseApiMemberResponse = (response) => {
-        const parts = response.split(' ');
-        if (parts[0] !== '2000') return [];
-        const members = parts[1].split('||').map(member => {
-            const [id, name] = member.split('&');
-            return { id, name };
-        });
-        return members;
-    };
+        fetchCheckAdmin();
+    }, [reFetch]);
 
     const renderContent = () => {
         switch (currentView) {
             case 'documents':
-                return <Documents items={items} loading={loading} handleItemClick={handleItemClick} />;
+                return <Documents groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
             case 'members':
-                return <Members groupId={groupId} token={token} />;
+                return <Members groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
+            case 'requests':
+                return <Requests groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
             case 'leave':
                 return <LeaveGroup />;
             default:
                 return <div>Select an option from the menu</div>;
         }
     };
-
+    
     const handleLeaveGroup = async () => {
         try {
             const response = await window.electronAPI.leaveGroup(token, groupId);
@@ -200,6 +102,9 @@ const GroupDetail = () => {
                     </Menu.Item>
                     <Menu.Item key="members" icon={<TeamOutlined />}>
                         Members
+                    </Menu.Item>
+                    <Menu.Item key="requests" icon={<PlusSquareOutlined />}>
+                        Requests
                     </Menu.Item>
                     <Menu.Item key="leave" onClick={handleLeaveGroup} icon={<LogoutOutlined />} style={{ color: 'red' }}>
                         Leave Group

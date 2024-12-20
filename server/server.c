@@ -168,6 +168,12 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 2);
         handle_registration(client_sock, tokens[0], tokens[1]);
     }
+    else if (strcmp(command, "CHECK_ADMIN") == 0)
+    {
+        split(data, "||", tokens, 1);
+        int group_id = atoi(tokens[0]);
+        handle_check_admin(client_sock, token, group_id);
+    }
 
     else if (strcmp(command, "LOG_ACTIVITY") == 0)
     {
@@ -194,6 +200,12 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int group_id = atoi(tokens[0]);
         handle_list_group_members(client_sock, token, group_id);
     }
+    else if (strcmp(command, "LIST_REQUESTS") == 0)
+    {
+        split(data, "||", tokens, 1);
+        int group_id = atoi(tokens[0]);
+        handle_list_requests(client_sock, token, group_id);
+    }
     else if (strcmp(command, "REQUEST_JOIN_GROUP") == 0)
     {
         split(data, "||", tokens, 1);
@@ -217,10 +229,9 @@ void handle_command(int client_sock, const char *command, const char *token, con
     else if (strcmp(command, "APPROVE_JOIN_REQUEST") == 0)
     {
         split(data, "||", tokens, 2);
-        int user_id = atoi(tokens[0]);
+        int request_id = atoi(tokens[0]);
         const char *approval_status = tokens[1];
-        handle_approve_join_request(client_sock, token, user_id, approval_status);
-        // Handle approve join request with token, group ID, and user ID
+        handle_approve_join_request(client_sock, token, request_id, approval_status);
     }
     else if (strcmp(command, "LEAVE_GROUP") == 0)
     {
@@ -238,24 +249,16 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "LIST_GROUP_CONTENT") == 0)
     {
-        split(data, "||", tokens, 2);
-        if (tokens[1] != NULL) {
-            int group_id = atoi(tokens[1]);
-            handle_list_group_content(client_sock, token, group_id);
-        } else {
-            send(client_sock, "5000\r\n", 6, 0); // Lỗi yêu cầu không hợp lệ
-        }
+        split(data, "||", tokens, 1);
+        int group_id = atoi(tokens[0]);
+        handle_list_group_content(client_sock, token, group_id);
     }
     else if (strcmp(command, "LIST_DIRECTORY_CONTENT") == 0)
     {
-        split(data, "||", tokens, 3);
-        if (tokens[1] != NULL && tokens[1] != NULL) {
-            int group_id = atoi(tokens[1]);
-            int folder_id = atoi(tokens[2]);
-            handle_list_directory(client_sock, token, group_id,folder_id);
-        } else {
-            send(client_sock, "5000\r\n", 6, 0); // Lỗi yêu cầu không hợp lệ
-        }
+        split(data, "||", tokens, 2);
+        int group_id = atoi(tokens[0]);
+        int folder_id = atoi(tokens[1]);
+        handle_list_directory(client_sock, token, group_id,folder_id);
     }
     else if (strcmp(command, "UPLOAD_FILE") == 0)
     {
@@ -272,10 +275,17 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 2);
         // Handle rename item with token, item ID, and new name
     }
-    else if (strcmp(command, "DELETE_ITEM") == 0)
+    else if (strcmp(command, "DELETE_DIR") == 0)
     {
-        split(data, "||", tokens, 2);
-        // Handle delete item with token, item ID, and item type
+        split(data, "||", tokens, 1);
+        int dir_id = atoi(tokens[0]);
+        handle_delete_dir(client_sock, token, dir_id);
+    }
+        else if (strcmp(command, "DELETE_FILE") == 0)
+    {
+        split(data, "||", tokens, 1);
+        int file_id = atoi(tokens[0]);
+        handle_delete_file(client_sock, token, file_id);
     }
     else if (strcmp(command, "COPY_ITEM") == 0)
     {
@@ -303,19 +313,50 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
 }
 
+// void split(const char *str, const char *delim, char **out, int max_tokens)
+// {
+//     char *token;
+//     char *str_copy = strdup(str); // Tạo một bản sao của chuỗi đầu vào
+//     int i = 0;
+
+//     token = strtok(str_copy, delim); // Tách phần tử đầu tiên
+//     while (token != NULL && i < max_tokens)
+//     {                                // Lặp lại cho đến khi không còn phần tử nào hoặc đạt đến giới hạn max_tokens
+//         out[i++] = strdup(token);    // Lưu phần tử vào mảng out
+//         token = strtok(NULL, delim); // Tách phần tử tiếp theo
+//     }
+
+//     free(str_copy); // Giải phóng bộ nhớ của bản sao chuỗi
+// }
+
+
 void split(const char *str, const char *delim, char **out, int max_tokens)
 {
     char *token;
-    char *str_copy = strdup(str); // Tạo một bản sao của chuỗi đầu vào
-    int i = 0;
+    char *str_copy = strdup(str); // Tạo bản sao của chuỗi đầu vào
+    if (str_copy == NULL) {
+        fprintf(stderr, "Error: strdup failed for str_copy\n");
+        return;
+    }
+    printf("DEBUG: str_copy = '%s'\n", str_copy); // Debug bản sao của chuỗi đầu vào
 
+    int i = 0;
     token = strtok(str_copy, delim); // Tách phần tử đầu tiên
     while (token != NULL && i < max_tokens)
-    {                                // Lặp lại cho đến khi không còn phần tử nào hoặc đạt đến giới hạn max_tokens
-        out[i++] = strdup(token);    // Lưu phần tử vào mảng out
+    {
+        printf("DEBUG: token[%d] = '%s'\n", i, token); // Debug từng token được tách
+        out[i] = strdup(token); // Sao chép token độc lập vào mảng out
+        if (out[i] == NULL) {
+            fprintf(stderr, "Error: strdup failed for token[%d]\n", i);
+            break;
+        }
+        printf("DEBUG: out[%d] = '%s'\n", i, out[i]); // Debug giá trị lưu vào mảng out
+        i++;
         token = strtok(NULL, delim); // Tách phần tử tiếp theo
     }
 
+    out[i] = NULL; // Đặt NULL vào cuối mảng để đánh dấu kết thúc
+    printf("DEBUG: Total tokens = %d\n", i); // Debug tổng số token đã tách
+
     free(str_copy); // Giải phóng bộ nhớ của bản sao chuỗi
 }
-

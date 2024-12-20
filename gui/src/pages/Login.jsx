@@ -16,7 +16,8 @@ const Login = () => {
             setResponseMessage(response);
             if (response.startsWith('2000')) {
                 const tokenValue = response.split(' ')[1];
-                login(tokenValue, username);
+                const cleanToken = tokenValue.replace(/\n/g, '').replace(/\r/g, '');
+                login(cleanToken, username);
                 navigate('/');
             }
         } catch (error) {
