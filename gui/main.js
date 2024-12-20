@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const net = require('net');
+const fs = require('fs');
 const connectionManager = require('./connectionManager');
 
 function createWindow() {
@@ -147,4 +149,49 @@ ipcMain.handle('upload-file', async (event, token, groupId, dataString) => {
     await connectionManager.connect();
     const message = `UPLOAD_FILE ${token} ${groupId}||${dataString}\r\n`;
     return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('file-detail', async (event, token, groupId, fileId) => {
+    await connectionManager.connect();
+    const message = `FILE_DETAIL ${token} ${groupId}||${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('download-file', async (event, token, fileId) => {
+    const client = new net.Socket();
+    const filePath = path.join(app.getPath('downloads'), `${fileId}.downloaded`); // Lưu file trong thư mục Downloads
+
+    return new Promise((resolve, reject) => {
+        let fileStream;
+
+        try {
+            fileStream = fs.createWriteStream(filePath);
+
+            client.connect(1234, '127.0.0.1', () => {
+                console.log('Connected to server');
+                const message = `DOWNLOAD_FILE ${token} ${fileId}\r\n`;
+                client.write(message);
+            });
+
+            client.on('data', (data) => {
+                console.log(`Received ${data.length} bytes`);
+                fileStream.write(data); // Ghi dữ liệu vào file
+            });
+
+            client.on('end', () => {
+                console.log('Download complete');
+                fileStream.close();
+                resolve({ success: true, filePath });
+            });
+
+            client.on('error', (err) => {
+                console.error('Socket error:', err);
+                fileStream.close();
+                reject(err);
+            });
+        } catch (err) {
+            if (fileStream) fileStream.close();
+            reject(err);
+        }
+    });
 });

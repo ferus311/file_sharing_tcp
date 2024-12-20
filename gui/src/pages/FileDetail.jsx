@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, Card, Spin, Button } from 'antd';
+import { Typography, Card, Spin, Button, message } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const FileDetail = () => {
+    const { token } = useAuth();
     const { fileId, groupId } = useParams();
     const [fileDetails, setFileDetails] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -12,7 +14,7 @@ const FileDetail = () => {
         // Giả lập API để lấy thông tin chi tiết của file
         const fetchFileDetails = async () => {
             // Giả lập API response cho thông tin tệp
-            const apiResponse = await fetchFileDetail(groupId, fileId);
+            const apiResponse = await fakeFileDetail(groupId, fileId);
             setFileDetails(apiResponse);
             setLoading(false);
         };
@@ -20,7 +22,7 @@ const FileDetail = () => {
         fetchFileDetails();
     }, [groupId, fileId]);
 
-    const fetchFileDetail = (groupId, fileId) => {
+    const fakeFileDetail = (groupId, fileId) => {
         // Giả lập dữ liệu trả về từ API
         return {
             id: fileId,
@@ -28,9 +30,22 @@ const FileDetail = () => {
             description: `This is the detailed description for file ${fileId}.`,
             size: `${Math.floor(Math.random() * 100)} MB`,
             createdAt: '2024-01-01',
-            downloadLink: `https://example.com/file/${fileId}/download`,
         };
     };
+
+    const handleDownloadFile = async () => {
+        try {
+            console.log('Downloading file:', fileId);
+
+            const result = await window.electronAPI.downloadFile(token, fileId);
+            if (result.success) {
+                alert(`File has been downloaded to: ${result.filePath}`);
+            }
+        } catch (error) {
+            console.error('Error downloading file:', error);
+        }
+    };
+
 
     if (loading) {
         return (
@@ -46,12 +61,12 @@ const FileDetail = () => {
 
             <Card
                 title={`File: ${fileDetails.name}`}
-                extra={<Button type="primary" icon={<DownloadOutlined />} href={fileDetails.downloadLink} target="_blank">Download</Button>}
+                extra={<Button type="primary" icon={<DownloadOutlined />} onClick={handleDownloadFile}>Download</Button>}
                 style={{ width: 600, margin: '0 auto' }}
             >
-                <Typography.Text><strong>Description:</strong> {fileDetails.description}</Typography.Text><br />
-                <Typography.Text><strong>Size:</strong> {fileDetails.size}</Typography.Text><br />
-                <Typography.Text><strong>Created At:</strong> {fileDetails.createdAt}</Typography.Text><br />
+                <Typography.Paragraph>{fileDetails.description}</Typography.Paragraph>
+                <Typography.Paragraph>Size: {fileDetails.size}</Typography.Paragraph>
+                <Typography.Paragraph>Created At: {fileDetails.createdAt}</Typography.Paragraph>
             </Card>
         </div>
     );
