@@ -6,6 +6,12 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import CreateGroupModal from "../components/CreateGroupModal"; // Import Modal component
 
+message.config({
+    top: 80, // Cách mép trên cùng 80px
+    duration: 2, // Thời gian hiển thị mặc định 2 giây
+    maxCount: 3, // Số lượng message tối đa hiển thị cùng lúc
+});
+
 const Homepage = () => {
     const { token } = useAuth();
     const [groups, setGroups] = useState([]);
@@ -23,6 +29,7 @@ const Homepage = () => {
 
                 if (response.startsWith('2000')) {
                     const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
+                    console.log(data);
                     const groupArray = data
                         .split('||') // Tách các nhóm bằng "||"
                         .map((item) => {
