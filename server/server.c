@@ -280,6 +280,12 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int invitee_id = atoi(tokens[1]);
         handle_invite_user_to_group(client_sock, group_id, invitee_id);
     }
+        else if (strcmp(command, "LIST_AVAILABLE_INVITE_USERS") == 0)
+    {
+        split(data, "||", tokens, 1);
+        int group_id = atoi(tokens[0]);
+        handle_list_available_invite_user(client_sock, token, group_id);
+    }
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
         split(data, "||", tokens, 2);

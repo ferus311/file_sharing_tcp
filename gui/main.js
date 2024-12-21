@@ -106,6 +106,16 @@ ipcMain.handle(
     }
 );
 
+ipcMain.handle(
+    'list-available-invite-users',
+    async (event, token, groupId) => {
+        await connectionManager.connect();
+        const message = `LIST_AVAILABLE_INVITE_USERS ${token} ${groupId}\r\n`;
+        return connectionManager.sendMessage(message);
+    }
+);
+
+
 ipcMain.handle('leave-group', async (event, token, groupId) => {
     await connectionManager.connect();
     const message = `LEAVE_GROUP ${token} ${groupId}\r\n`;

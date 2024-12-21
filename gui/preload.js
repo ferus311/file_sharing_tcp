@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('request-join-group', token, groupId),
     inviteUserToGroup: (token, groupId, inviteeId) =>
         ipcRenderer.invoke('invite-user-to-group', token, groupId, inviteeId),
+    listAvailableInviteUsers: (token, groupId) =>
+        ipcRenderer.invoke('list-available-invite-users', token, groupId),
     leaveGroup: (token, groupId) =>
         ipcRenderer.invoke('leave-group', token, groupId),
     deleteGroup: (token, groupId) =>
