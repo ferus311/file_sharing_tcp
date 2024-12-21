@@ -6,8 +6,9 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <mysql/mysql.h>
-#include <fcntl.h>
-#include <sys/select.h>
+#include "sys/select.h"
+
+#include "token/token.h"
 #include "user/user.h"
 #include "file/file.h"
 #include "group/group.h"
@@ -15,6 +16,7 @@
 
 #define PORT 1234
 #define BACKLOG 10
+#define BUFFER_SIZE 1024
 
 MYSQL *conn;
 
@@ -101,10 +103,8 @@ int main()
                     continue;
                 }
 
-                // Handle client request
                 handle_client_request(i);
 
-                // Close the connection after handling the request
                 close(i);
                 FD_CLR(i, &read_fds);
             }
@@ -117,9 +117,74 @@ int main()
     return 0;
 }
 
+void handle_download_file(int client_sock, const char *token, int file_id)
+{
+    printf("Debug: handle_download_file called with token: %s, file_id: %d\n", token, file_id);
+
+    // Kiểm tra token và quyền truy cập (nếu cần)
+    // ...
+
+    // Truy vấn cơ sở dữ liệu để lấy thông tin tệp
+    char query[BUFFER_SIZE];
+    snprintf(query, sizeof(query), "SELECT file_name, file_path FROM files WHERE file_id = %d", file_id);
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to query file info: %s\n", mysql_error(conn));
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        return;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (result == NULL)
+    {
+        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        return;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (row == NULL)
+    {
+        send(client_sock, "404 File Not Found", strlen("404 File Not Found"), 0);
+        mysql_free_result(result);
+        return;
+    }
+
+    const char *file_name = row[0];
+    const char *file_path = row[1];
+    printf("Debug: file_name: %s, file_path: %s\n", file_name, file_path);
+
+    // Mở tệp để đọc
+    FILE *file = fopen(file_path, "rb");
+    if (file == NULL)
+    {
+        perror("Failed to open file");
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        mysql_free_result(result);
+        return;
+    }
+
+    // Gửi tệp về client
+    char buffer[BUFFER_SIZE];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
+    {
+        if (send(client_sock, buffer, bytes_read, 0) < 0)
+        {
+            perror("Failed to send file");
+            break;
+        }
+        printf("Debug: Sent %zu bytes\n", bytes_read);
+    }
+
+    fclose(file);
+    mysql_free_result(result);
+}
+
 void handle_client_request(int client_sock)
 {
-    char buffer[1024];
+    char buffer[1024 * 4 + 256]; // chunk data + token + command
     int bytes_read;
 
     // Read request from client
@@ -133,7 +198,7 @@ void handle_client_request(int client_sock)
     buffer[bytes_read] = '\0';
 
     char command[50], token[512], data[1024];
-    printf("%s\n",buffer);
+    printf("%s\n", buffer);
     parse_message(buffer, command, token, data);
     handle_command(client_sock, command, token, data);
 }
@@ -174,12 +239,9 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int group_id = atoi(tokens[0]);
         handle_check_admin(client_sock, token, group_id);
     }
-
     else if (strcmp(command, "LOG_ACTIVITY") == 0)
     {
-        // char *tokens[2];
         split(data, "||", tokens, 2);
-
         int group_id = atoi(tokens[0]);
         const char *timestamp = tokens[1];
         show_log(client_sock, group_id, timestamp);
@@ -191,7 +253,6 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "LIST_GROUPS") == 0)
     {
-        // Handle list groups with token
         handle_list_group(client_sock, token);
     }
     else if (strcmp(command, "LIST_GROUP_MEMBERS") == 0)
@@ -219,6 +280,12 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int invitee_id = atoi(tokens[1]);
         handle_invite_user_to_group(client_sock, group_id, invitee_id);
     }
+        else if (strcmp(command, "LIST_AVAILABLE_INVITE_USERS") == 0)
+    {
+        split(data, "||", tokens, 1);
+        int group_id = atoi(tokens[0]);
+        handle_list_available_invite_user(client_sock, token, group_id);
+    }
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
         split(data, "||", tokens, 2);
@@ -238,7 +305,6 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 1);
         int group_id = atoi(tokens[0]);
         handle_leave_group(client_sock, token, group_id);
-        // Handle leave group with token and group ID
     }
     else if (strcmp(command, "REMOVE_MEMBER") == 0)
     {
@@ -262,13 +328,16 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "UPLOAD_FILE") == 0)
     {
-        split(data, "||", tokens, 4);
-        // Handle upload file with token, group ID, file data, file name, file size, and directory ID
+        int group_id;
+        char remaining_data[BUFFER_SIZE * 4]; // Increased size for base64 data
+        sscanf(data, "%d||%4095[^\r\n]", &group_id, remaining_data);
+        handle_receive_file_chunk(client_sock, token, group_id, remaining_data);
     }
     else if (strcmp(command, "DOWNLOAD_FILE") == 0)
     {
-        split(data, "||", tokens, 2);
-        // Handle download file with token and file ID
+        int file_id;
+        sscanf(data, "%d", &file_id);
+        handle_download_file(client_sock, token, file_id);
     }
     else if (strcmp(command, "RENAME_ITEM") == 0)
     {
@@ -297,7 +366,6 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", tokens, 2);
         // Handle move item with token, item ID, and target directory ID
     }
-
     else
     {
         send(client_sock, "4000\r\n", 6, 0); // Bad request

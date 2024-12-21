@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const net = require('net');
+const fs = require('fs');
 const connectionManager = require('./connectionManager');
 
 function createWindow() {
@@ -95,11 +97,24 @@ ipcMain.handle('request-join-group', async (event, token, groupId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('invite-user-to-group', async (event, token, groupId, inviteeId) => {
-    await connectionManager.connect();
-    const message = `INVITE_USER_TO_GROUP ${token} ${groupId}||${inviteeId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
+ipcMain.handle(
+    'invite-user-to-group',
+    async (event, token, groupId, inviteeId) => {
+        await connectionManager.connect();
+        const message = `INVITE_USER_TO_GROUP ${token} ${groupId}||${inviteeId}\r\n`;
+        return connectionManager.sendMessage(message);
+    }
+);
+
+ipcMain.handle(
+    'list-available-invite-users',
+    async (event, token, groupId) => {
+        await connectionManager.connect();
+        const message = `LIST_AVAILABLE_INVITE_USERS ${token} ${groupId}\r\n`;
+        return connectionManager.sendMessage(message);
+    }
+);
+
 
 ipcMain.handle('leave-group', async (event, token, groupId) => {
     await connectionManager.connect();
@@ -131,13 +146,28 @@ ipcMain.handle('remove-member', async (event, token, groupId, userId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('list-directory-content', async (event, token, groupId, directoryId) => {
+ipcMain.handle(
+    'list-directory-content',
+    async (event, token, groupId, directoryId) => {
+        await connectionManager.connect();
+        const message = `LIST_DIRECTORY_CONTENT ${token} ${groupId}||${directoryId}\r\n`;
+        return connectionManager.sendMessage(message);
+    }
+);
+
+ipcMain.handle('list-group-content', async (event, token, groupId) => {
     await connectionManager.connect();
-    const message = `LIST_DIRECTORY_CONTENT ${token} ${groupId}||${directoryId}\r\n`;
+    const message = `LIST_GROUP_CONTENT ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('list-group-content', async (event, token, groupId) => {
+ipcMain.handle('delete-file', async (event, token, fileId) => {
+    await connectionManager.connect();
+    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('delete-dir', async (event, token, dirId) => {
     await connectionManager.connect();
     const message = `LIST_GROUP_CONTENT ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
@@ -155,4 +185,80 @@ ipcMain.handle('delete-dir', async (event, token, dirId) => {
     return connectionManager.sendMessage(message);
 });
 
+ipcMain.handle('delete-file', async (event, token, fileId) => {
+    await connectionManager.connect();
+    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
 
+ipcMain.handle('delete-dir', async (event, token, dirId) => {
+    await connectionManager.connect();
+    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('delete-file', async (event, token, fileId) => {
+    await connectionManager.connect();
+    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('delete-dir', async (event, token, dirId) => {
+    await connectionManager.connect();
+    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+
+
+
+ipcMain.handle('upload-file', async (event, token, groupId, dataString) => {
+    await connectionManager.connect();
+    const message = `UPLOAD_FILE ${token} ${groupId}||${dataString}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('file-detail', async (event, token, groupId, fileId) => {
+    await connectionManager.connect();
+    const message = `FILE_DETAIL ${token} ${groupId}||${fileId}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('download-file', async (event, token, fileId) => {
+    const client = new net.Socket();
+    const filePath = path.join(app.getPath('downloads'), `${fileId}.downloaded`); // Lưu file trong thư mục Downloads
+
+    return new Promise((resolve, reject) => {
+        let fileStream;
+
+        try {
+            fileStream = fs.createWriteStream(filePath);
+
+            client.connect(1234, '127.0.0.1', () => {
+                console.log('Connected to server');
+                const message = `DOWNLOAD_FILE ${token} ${fileId}\r\n`;
+                client.write(message);
+            });
+
+            client.on('data', (data) => {
+                console.log(`Received ${data.length} bytes`);
+                fileStream.write(data); // Ghi dữ liệu vào file
+            });
+
+            client.on('end', () => {
+                console.log('Download complete');
+                fileStream.close();
+                resolve({ success: true, filePath });
+            });
+
+            client.on('error', (err) => {
+                console.error('Socket error:', err);
+                fileStream.close();
+                reject(err);
+            });
+        } catch (err) {
+            if (fileStream) fileStream.close();
+            reject(err);
+        }
+    });
+});

@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('request-join-group', token, groupId),
     inviteUserToGroup: (token, groupId, inviteeId) =>
         ipcRenderer.invoke('invite-user-to-group', token, groupId, inviteeId),
+    listAvailableInviteUsers: (token, groupId) =>
+        ipcRenderer.invoke('list-available-invite-users', token, groupId),
     leaveGroup: (token, groupId) =>
         ipcRenderer.invoke('leave-group', token, groupId),
     deleteGroup: (token, groupId) =>
@@ -35,9 +37,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('list-directory-content', token, groupId, directoryId),
     listGroupContent: (token, groupId) =>
         ipcRenderer.invoke('list-group-content', token, groupId),
+    uploadFile: (token, groupId, dataString) =>
+        ipcRenderer.invoke('upload-file', token, groupId, dataString),
+    createFolder: (token, groupId, folderName) =>
+        ipcRenderer.invoke('create-folder', token, groupId, folderName),
+    fetchFileDetail: (token, groupId, fileId) =>
+        ipcRenderer.invoke('file-detail', token, groupId, fileId),
+    downloadFile: (token, fileId) =>
+        ipcRenderer.invoke('download-file', token, fileId),
     deleteDir: (token, dirId) =>
         ipcRenderer.invoke('delete-dir', token, dirId),
     deleteFile: (token, fileId) =>
         ipcRenderer.invoke('delete-file', token, fileId),
-    
 });

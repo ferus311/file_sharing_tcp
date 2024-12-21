@@ -255,48 +255,97 @@ int handle_list_requests(int client_sock, const char *token, int group_id) {
     return 2000;
 }
 
-
-
 // Mời người dùng vào nhóm
 int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id)
 {
     char query[512];
-    int code;
 
-    // Step 1: Check if group_id is existed
-    code = check_group_exist_by_id(client_sock, group_id);
-    if (code)
-    {
-        return code;
-    }
-
-    // Step 2: Check if invitee is in group_id
-    code = check_user_in_group(client_sock, invitee_id, group_id);
-    if (code)
-    {
-        return code;
-    }
-
-    // Step 3: Check if invitee_id is existed
-    code = check_user_exist_by_id(client_sock, invitee_id);
-    if (code)
-    {
-        return code;
-    }
-
-    // Step 5: Insert into user_groups
-    // FIXME: Insert into queue
-    snprintf(query, sizeof(query), "INSERT INTO group_requests (user_id, group_id, request_type) VALUES (%d, %d, 'invitation')", invitee_id, group_id);
+    // Step 1: Check if group_id exists
+    snprintf(query, sizeof(query), "SELECT 1 FROM `groups` WHERE group_id = %d", group_id);
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
-        return -1;
+        fprintf(stderr, "SELECT group_id failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // Failed to fetch group
+        return 5000;
+    }   
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_message(client_sock, 4040, NULL); // Group does not exist
+        if (res) mysql_free_result(res);
+        return 4040;
+    }
+    mysql_free_result(res);
+
+    // Step 2: Check if invitee_id exists
+    snprintf(query, sizeof(query), "SELECT 1 FROM users WHERE user_id = %d", invitee_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT invitee_id failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // Failed to fetch user
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_message(client_sock, 4040, NULL); // User does not exist
+        if (res) mysql_free_result(res);
+        return 4040;
+    }
+    mysql_free_result(res);
+
+    // Step 3: Check if invitee is already in the group
+    snprintf(query, sizeof(query), "SELECT 1 FROM user_groups WHERE user_id = %d AND group_id = %d", invitee_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT user in group failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // Failed to check group membership
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res != NULL && mysql_num_rows(res) > 0)
+    {
+        send_message(client_sock, 4001, NULL); // User already in group
+        mysql_free_result(res);
+        return 4001;
+    }
+    mysql_free_result(res);
+
+    // Step 4: Check if an invitation already exists
+    snprintf(query, sizeof(query), "SELECT 1 FROM group_requests WHERE user_id = %d AND group_id = %d AND request_type = 'invitation' AND status = 'pending'", invitee_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT pending invitation failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // Failed to check existing invitation
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res != NULL && mysql_num_rows(res) > 0)
+    {
+        send_message(client_sock, 4002, NULL); // Pending invitation already exists
+        mysql_free_result(res);
+        return 4002;
+    }
+    mysql_free_result(res);
+
+    // Step 5: Insert the invitation into group_requests
+    snprintf(query, sizeof(query), "INSERT INTO group_requests (user_id, group_id, request_type, status) VALUES (%d, %d, 'invitation', 'pending')", invitee_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "INSERT invitation failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // Failed to send invitation
+        return 5000;
     }
 
     // Step 6: Send the response back to the client
-    send_message(client_sock, 2000, NULL);
+    send_message(client_sock, 2000, NULL); // Invitation sent successfully
     return 2000;
 }
+
 
 // Rời nhóm
 int handle_leave_group(int client_sock, const char *token, int group_id)
@@ -609,7 +658,7 @@ int handle_respond_invitation(int client_sock, const char *token, int group_id, 
     }
 
     // Step 5: Update the group_requests table based on approval_status
-    if (strcmp(approval_status, "accept") == 0)
+    if (strcmp(approval_status, "accepted") == 0)
     {
         snprintf(query, sizeof(query), "UPDATE group_requests SET status = 'accepted' WHERE user_id = %d AND group_id = %d AND request_type = 'invitation'", int_user_id, group_id);
     }
@@ -747,5 +796,108 @@ int handle_approve_join_request(int client_sock, const char *token, int request_
 
     // Step 8: Send success response
     send_message(client_sock, 2000, NULL);//"Request processed successfully"
+    return 2000;
+}
+
+// Liet ke danh sach user khong co trong nhom
+int handle_list_available_invite_user(int client_sock, const char *token, int group_id) {
+    char query[512];
+    int user_id = get_user_id_by_token(token);
+
+    // Validate token and user_id
+    if (user_id <= 0) {
+        send_message(client_sock, 4030, NULL); // "Invalid or expired token"
+        return 4030;
+    }
+
+    // Step 1: Check if the user is the creator of the group
+    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        return 5000;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        return 5000;
+    }
+
+    if (mysql_num_rows(res) == 0) {
+        send_message(client_sock, 4040, NULL); // "Group not found"
+        mysql_free_result(res);
+        return 4040;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int created_by = atoi(row[0]); // Get the creator's user ID
+    mysql_free_result(res);
+
+    if (created_by != user_id) {
+        send_message(client_sock, 4030, NULL); // "Permission denied: You are not the creator of this group"
+        return 4030;
+    }
+
+    // Step 2: Query users who are not already part of the group
+    snprintf(query, sizeof(query),
+             "SELECT u.user_id, u.username "
+             "FROM users u "
+             "WHERE u.user_id NOT IN ("
+             "  SELECT ug.user_id "
+             "  FROM user_groups ug "
+             "  WHERE ug.group_id = %d"
+             ") AND u.user_id NOT IN ("
+             "  SELECT gr.user_id "
+             "  FROM group_requests gr "
+             "  WHERE gr.group_id = %d AND gr.status = 'pending'"
+             ")",
+             group_id, group_id);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "SELECT available users failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch available users"
+        return 5000;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch available users"
+        return 5000;
+    }
+
+    int num_rows = mysql_num_rows(res);
+    if (num_rows == 0) {
+        send_message(client_sock, 2000, NULL); // No available users found
+        mysql_free_result(res);
+        return 2000;
+    }
+
+    // Step 3: Build the response
+    char response[2048] = "";
+    MYSQL_ROW user_row;
+
+    while ((user_row = mysql_fetch_row(res))) {
+        char temp[256];
+        int available_user_id = atoi(user_row[0]);
+        char *username = user_row[1];
+
+        snprintf(temp, sizeof(temp), "%d&%s||", available_user_id, username);
+        strncat(response, temp, sizeof(response) - strlen(response) - 1);
+    }
+
+    mysql_free_result(res);
+
+    // Step 4: Remove trailing "||" if present
+    int len = strlen(response);
+    if (len > 2 && response[len - 2] == '|' && response[len - 1] == '|') {
+        response[len - 2] = '\0';
+    }
+
+    // Step 5: Send the response back to the client
+    send_message(client_sock, 2000, response);
     return 2000;
 }

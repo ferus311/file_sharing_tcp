@@ -36,3 +36,8 @@ Di chuyen den thu muc server
 
 -   chay lenh: npm run dev
 -   sau do reload man hinh electron ( ctrl r )
+
+
+## kill port dang su dung
+- sudo lsof -i :1234
+- sudo kill 12345
