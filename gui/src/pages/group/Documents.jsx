@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Breadcrumb, Typography, Card, List, Avatar, message, Button, Popconfirm } from 'antd';
-import { FolderOutlined, FileOutlined, TeamOutlined, LogoutOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Layout, Card, List, Avatar, message, Button, Popconfirm, Modal, Input, Upload } from 'antd';
+import { FolderOutlined, FileOutlined,   DeleteOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
@@ -8,6 +8,11 @@ const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
     const [isAdmin, setIsAdmin] = useState(isAdminProps);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    const [itemsDir, setItemsDir] = useState([]);
+
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
 
     useEffect(() => {
         fetchListGroupContent();
@@ -76,11 +81,108 @@ const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
         }
     };
 
+    const handleUpload = async ({ file }) => {
+        const CHUNK_SIZE = 1024; // Kích thước mỗi phần tệp
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const fileExtension = file.name.split('.').pop(); // Trích xuất định dạng tệp
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const chunkData = e.target.result.split(',')[1]; // Lấy dữ liệu base64 từ kết quả đọc
+                const dataString = `${file.name}||${fileExtension}||${chunkIndex}||${totalChunks}||${chunkData}`;
+                message.info(`Uploading chunk ${chunkIndex + 1} of ${totalChunks}`);
+                try {
+                    const response = await window.electronAPI.uploadFile(token, groupId, dataString);
+                    console.log(response);
+                    if (!response.startsWith('2000')) {
+                        throw new Error('Failed to upload chunk');
+                    }
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    message.error('An error occurred while uploading the file.');
+                    return;
+                }
+            };
+            reader.readAsDataURL(chunk);
+            await new Promise(resolve => reader.onloadend = resolve); // Đảm bảo rằng mỗi phần được gửi tuần tự
+        }
+
+        message.success('File uploaded successfully.');
+        // Refresh the list of documents
+        fetchListGroupContent();
+    };
+
+
+    const handleCreateFolder = async () => {
+        try {
+            setItemsDir([...itemsDir, { type: 'D', id: 1, name: newFolderName }]);
+            message.success('Folder created successfully.');
+            setIsModalVisible(false);
+            setNewFolderName('');
+            // const response = await window.electronAPI.createFolder(token, groupId, newFolderName);
+            // if (response.startsWith('2000')) {
+            //     message.success('Folder created successfully.');
+            //     setIsModalVisible(false);
+            //     setNewFolderName('');
+
+            //     setItemsDir(...itemsDir, {type: 'D', id: 1, name: newFolderName})
+            //     // Refresh the list of documents
+            //     const fetchGroupDetails = async () => {
+            //         try {
+            //             const response = await window.electronAPI.getGroupDetails(groupId);
+            //             if (response.startsWith('2000')) {
+            //                 const parsedItemsDir = parseApiResponse(response);
+            //                 setItemsDir(parsedItemsDir);
+            //             } else {
+            //                 console.error('Failed to fetch group details:', response);
+            //             }
+            //         } catch (error) {
+            //             console.error('Error fetching group details:', error);
+            //         }
+            //     };
+            //     fetchGroupDetails();
+            // } else {
+            //     message.error('Failed to create folder.');
+            // }
+        } catch (error) {
+            console.error('Error creating folder:', error);
+            message.error('An error occurred while creating the folder.');
+        }
+    };
+
     return (
         <>
             <div>  
                 {isAdmin === 1 ? "ADMIN" : "MEMBER"} 
             </div>
+            <Layout>
+                <div style={{ marginBottom: '16px', display: 'flex', }}>
+                    <Upload customRequest={handleUpload}>
+                        <Button icon={<UploadOutlined />}>Upload File</Button>
+                    </Upload>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)} style={{ marginLeft: '8px' }}>
+                        Create Folder
+                    </Button>
+                </div>
+                <Modal
+                    title="Create New Folder"
+                    visible={isModalVisible}
+                    onOk={handleCreateFolder}
+                    onCancel={() => setIsModalVisible(false)}
+                >
+                    <Input
+                        placeholder="Enter folder name"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                    />
+                </Modal>
+            </Layout>
             <List
             grid={{ gutter: 16, column: 4 }}
             dataSource={items}

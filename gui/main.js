@@ -173,45 +173,6 @@ ipcMain.handle('delete-dir', async (event, token, dirId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('delete-file', async (event, token, fileId) => {
-    await connectionManager.connect();
-    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-ipcMain.handle('delete-dir', async (event, token, dirId) => {
-    await connectionManager.connect();
-    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-ipcMain.handle('delete-file', async (event, token, fileId) => {
-    await connectionManager.connect();
-    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-ipcMain.handle('delete-dir', async (event, token, dirId) => {
-    await connectionManager.connect();
-    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-ipcMain.handle('delete-file', async (event, token, fileId) => {
-    await connectionManager.connect();
-    const message = `DELETE_FILE ${token} ${fileId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-ipcMain.handle('delete-dir', async (event, token, dirId) => {
-    await connectionManager.connect();
-    const message = `DELETE_DIR ${token} ${dirId}\r\n`;
-    return connectionManager.sendMessage(message);
-});
-
-
-
-
 ipcMain.handle('upload-file', async (event, token, groupId, dataString) => {
     await connectionManager.connect();
     const message = `UPLOAD_FILE ${token} ${groupId}||${dataString}\r\n`;

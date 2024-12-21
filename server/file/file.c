@@ -10,6 +10,7 @@
 #include <mysql/mysql.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <errno.h>
 
 #include "../group/utils.h"
 #include "file.h"
@@ -17,7 +18,6 @@
 
 #define BUFFER_SIZE 1024
 #define FILE_PATH_SIZE 2048
-
 
 extern MYSQL *conn; // Sử dụng kết nối MySQL toàn cục từ db.h
 
@@ -620,42 +620,58 @@ unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *o
     return buffer;
 }
 
+size_t get_file_size(const char *file_path) {
+    struct stat st;
+    if (stat(file_path, &st) == 0) {
+        return st.st_size;
+    }
+    return 0;
+}
+
 void handle_receive_file_chunk(int client_sock, const char *token, int group_id, const char *data) {
     char file_name[BUFFER_SIZE];
     char file_extension[BUFFER_SIZE];
     int chunk_index, total_chunks;
-    char chunk_data[BUFFER_SIZE * 4]; // Increased size for base64 data
+    char chunk_data[BUFFER_SIZE * 4]; // Dành cho dữ liệu base64
+
+    int user_id = get_user_id_by_token(token);
 
     // Parse data
-    sscanf(data, "%1023[^|]||%1023[^|]||%d||%d||%4100s", file_name, file_extension, &chunk_index, &total_chunks, chunk_data);
-
-    // Debug: Print parsed data
-    printf("Received chunk: file_name=%s, file_extension=%s, chunk_index=%d, total_chunks=%d\n", file_name, file_extension, chunk_index, total_chunks);
+    if (sscanf(data, "%1023[^|]||%1023[^|]||%d||%d||%4100s", file_name, file_extension, &chunk_index, &total_chunks, chunk_data) != 5) {
+        perror("Failed to parse chunk data");
+        send(client_sock, "5000 Failed to parse chunk data", strlen("5000 Failed to parse chunk data"), 0);
+        return;
+    }
 
     // Decode base64
     size_t decoded_length;
     unsigned char *decoded_data = base64_decode_v2(chunk_data, strlen(chunk_data), &decoded_length);
-
-    // Debug: Print decoded data length
-    printf("Decoded data length: %zu\n", decoded_length);
+    if (!decoded_data) {
+        perror("Failed to decode base64 data");
+        send(client_sock, "5000 Failed to decode base64 data", strlen("5000 Failed to decode base64 data"), 0);
+        return;
+    }
 
     // Create directory if not exists
     char group_folder[FILE_PATH_SIZE];
     snprintf(group_folder, sizeof(group_folder), "uploads/group_%d", group_id);
-    mkdir(group_folder, 0777);
+    if (mkdir(group_folder, 0777) && errno != EEXIST) {
+        perror("Failed to create group directory");
+        free(decoded_data);
+        send(client_sock, "5000 Failed to create group directory", strlen("5000 Failed to create group directory"), 0);
+        return;
+    }
 
     // File path
     char file_path[FILE_PATH_SIZE];
     snprintf(file_path, sizeof(file_path), "%s/%s", group_folder, file_name);
-
-    // Debug: Print file path
-    printf("File path: %s\n", file_path);
 
     // Open file in append mode
     FILE *file = fopen(file_path, "ab");
     if (file == NULL) {
         perror("Failed to open file");
         free(decoded_data);
+        send(client_sock, "5000 Failed to write file", strlen("5000 Failed to write file"), 0);
         return;
     }
 
@@ -664,7 +680,21 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
     free(decoded_data);
 
     if (chunk_index == total_chunks - 1) {
-        printf("File received successfully: %s\n", file_path);
+        // File is fully received, save to database
+        size_t file_size = get_file_size(file_path);
+        char query[BUFFER_SIZE];
+        snprintf(query, sizeof(query),
+                 "INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id) "
+                 "VALUES ('%s', '%s', %zu, (SELECT user_id FROM users WHERE user_id = '%d'), %d)",
+                 file_name, file_path, file_size, user_id, group_id);
+
+        if (mysql_query(conn, query)) {
+            fprintf(stderr, "Failed to save file info to database. Error: %s\n", mysql_error(conn));
+            send(client_sock, "5000 Failed to save file info", strlen("5000 Failed to save file info"), 0);
+            return;
+        }
+
+        printf("File received and saved to database successfully: %s\n", file_path);
         send(client_sock, "2000 File uploaded successfully", strlen("2000 File uploaded successfully"), 0);
     } else {
         printf("Chunk %d of %d uploaded successfully\n", chunk_index, total_chunks);
