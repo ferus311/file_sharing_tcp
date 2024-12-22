@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
+import Invite from './pages/Invite';
+import JoinGroup from './pages/JoinGroup';
 import Layout from './components/Layout';
 import GroupDetail from './pages/GroupDetail';
 import FolderDetail from './pages/FolderDetail';
@@ -38,6 +40,22 @@ function App() {
                         element={
                             <Layout>
                                 <Homepage />
+                            </Layout>
+                        }
+                    />
+                    <Route
+                        path="/invite"
+                        element={
+                            <Layout>
+                                <Invite />
+                            </Layout>
+                        }
+                    />
+                    <Route
+                        path="/join-group"
+                        element={
+                            <Layout>
+                                <JoinGroup />
                             </Layout>
                         }
                     />

@@ -255,6 +255,10 @@ void handle_command(int client_sock, const char *command, const char *token, con
     {
         handle_list_group(client_sock, token);
     }
+    else if (strcmp(command, "LIST_GROUPS_NOT_JOINED") == 0)
+    {
+        handle_list_group_not_joined(client_sock, token);
+    }
     else if (strcmp(command, "LIST_GROUP_MEMBERS") == 0)
     {
         split(data, "||", tokens, 1);
@@ -286,12 +290,16 @@ void handle_command(int client_sock, const char *command, const char *token, con
         int group_id = atoi(tokens[0]);
         handle_list_available_invite_user(client_sock, token, group_id);
     }
+    else if (strcmp(command, "LIST_INVITATIONS") == 0)
+    {
+        handle_list_invitations(client_sock, token);
+    }
     else if (strcmp(command, "RESPOND_INVITATION") == 0)
     {
         split(data, "||", tokens, 2);
-        int group_id = atoi(tokens[0]);
+        int requestId = atoi(tokens[0]);
         const char *approval_status = tokens[1];
-        handle_respond_invitation(client_sock, token, group_id, approval_status);
+        handle_respond_invitation(client_sock, token, requestId, approval_status);
     }
     else if (strcmp(command, "APPROVE_JOIN_REQUEST") == 0)
     {

@@ -71,13 +71,10 @@ const Header = () => {
                                                         <Link to="/" style={{ color: 'white' }}>Home</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/about" style={{ color: 'white' }}>About</Link>
+                                                        <Link to="/invite" style={{ color: 'white' }}>Invite</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/services" style={{ color: 'white' }}>Services</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link to="/contact" style={{ color: 'white' }}>Contact</Link>
+                                                        <Link to="/join-group" style={{ color: 'white' }}>Join group</Link>
                                                     </li>
                                                 </ul>
                                             </nav>

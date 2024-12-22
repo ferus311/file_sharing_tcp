@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('create-group', token, groupName),
     listGroups: (token) =>
         ipcRenderer.invoke('list-groups', token),
+    listGroupsNotJoined: (token) =>
+        ipcRenderer.invoke('list-groups-not-joined', token),
     listGroupMembers: (token, groupId) =>
         ipcRenderer.invoke('list-group-members', token, groupId),
     listRequests: (token, groupId) =>
@@ -27,8 +29,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('leave-group', token, groupId),
     deleteGroup: (token, groupId) =>
         ipcRenderer.invoke('delete-group', token, groupId),
-    respondInvitation: (token, groupId, approvalStatus) =>
-        ipcRenderer.invoke('respond-invitation', token, groupId, approvalStatus),
+    listInvitations: (token) =>
+        ipcRenderer.invoke('list-invitations', token),
+    respondInvitation: (token, requestId, approvalStatus) =>
+        ipcRenderer.invoke('respond-invitation', token, requestId, approvalStatus),
     approveJoinRequest: (token, requestId, status) =>
         ipcRenderer.invoke('approve-join-request', token, requestId, status),
     removeMember: (token, groupId, userId) =>

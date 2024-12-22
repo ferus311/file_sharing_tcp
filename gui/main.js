@@ -79,6 +79,12 @@ ipcMain.handle('list-groups', async (event, token) => {
     return connectionManager.sendMessage(message);
 });
 
+ipcMain.handle('list-groups-not-joined', async (event, token) => {
+    await connectionManager.connect();
+    const message = `LIST_GROUPS_NOT_JOINED ${token}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
 ipcMain.handle('list-group-members', async (event, token, groupId) => {
     await connectionManager.connect();
     const message = `LIST_GROUP_MEMBERS ${token} ${groupId}\r\n`;
@@ -93,7 +99,7 @@ ipcMain.handle('list-requests', async (event, token, groupId) => {
 
 ipcMain.handle('request-join-group', async (event, token, groupId) => {
     await connectionManager.connect();
-    const message = `REQUEST_JOIN_GROUP ${token}||${groupId}\r\n`;
+    const message = `REQUEST_JOIN_GROUP ${token} ${groupId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
@@ -128,9 +134,15 @@ ipcMain.handle('delete-group', async (event, token, groupId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('respond-invitation', async (event, token, groupId, approvalStatus) => {
+ipcMain.handle('list-invitations', async (event, token) => {
     await connectionManager.connect();
-    const message = `RESPOND_INVITATION ${token} ${groupId}||${approvalStatus}\r\n`;
+    const message = `LIST_INVITATIONS ${token}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('respond-invitation', async (event, token, requestId, approvalStatus) => {
+    await connectionManager.connect();
+    const message = `RESPOND_INVITATION ${token} ${requestId}||${approvalStatus}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
