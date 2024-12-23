@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Breadcrumb, message } from 'antd';
-import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined, HomeOutlined } from '@ant-design/icons';
+import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined, HomeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './GroupDetail.css';
 import { useAuth } from '../context/AuthContext';
 import Documents from '../pages/group/Documents';
 import Members from '../pages/group/Members';
 import Requests from '../pages/group/Requests';
+import LogActivity from '../pages/group/LogActivity';
 
 const { Sider, Content } = Layout;
 message.config({
@@ -85,6 +86,8 @@ const GroupDetail = () => {
                 return <Members groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch} />;
             case 'requests':
                 return <Requests groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch} />;
+            case 'logActivity':
+                return <LogActivity groupId={groupId} />;
             case 'leave':
                 return <LeaveGroup />;
             default:
@@ -129,6 +132,9 @@ const GroupDetail = () => {
                     </Menu.Item>
                     <Menu.Item key="requests" icon={<PlusSquareOutlined />}>
                         Requests
+                    </Menu.Item>
+                    <Menu.Item key="logActivity" icon={<FileTextOutlined />}>
+                        Log Activity
                     </Menu.Item>
                     <Menu.Item key="leave" onClick={handleLeaveGroup} icon={<LogoutOutlined />} style={{ color: 'red' }}>
                         Leave Group

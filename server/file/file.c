@@ -293,6 +293,13 @@ void handle_download_file(int client_sock, const char *token, int file_id)
     fclose(file);
     mysql_free_result(result);
 
+    // Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'download_file', 'group', %d, 'Downloaded file %s')", get_user_id_by_token(token), file_id, file_name);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
     // Send status code 2000 when download is complete
     send_status(client_sock, 2000);
 }
@@ -362,6 +369,13 @@ int handle_delete_file(int client_sock, const char *token, int file_id)
     snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %d", file_id);
     if (mysql_query(conn, query) == 0)
     {
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'delete_file', 'group', %d, 'Deleted file %s')", user_id, group_id, file_path);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
+
         send_status(client_sock, 2000); // Xóa file thành công
         return 0;
     }
@@ -426,6 +440,13 @@ int handle_delete_folder(int client_sock, const char *token, int dir_id)
 
     if (mysql_query(conn, query) == 0)
     {
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'delete_folder', 'group', %d, 'Deleted folder %d')", user_id, group_id, dir_id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
+
         send_status(client_sock, 2000); // Xóa thư mục thành công
         return 0;
     }
@@ -603,6 +624,13 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
             return;
         }
 
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'upload_file', 'group', %d, 'Uploaded file %s')", user_id, group_id, file_name);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
+
         printf("File received and saved to database successfully: %s\n", file_path);
         send(client_sock, "2000 File uploaded successfully", strlen("2000 File uploaded successfully"), 0);
     }
@@ -641,6 +669,13 @@ void handle_create_folder(int client_sock, const char *token, int group_id, int 
     {
         send_status(client_sock, 5000); // SQL insert error
         return;
+    }
+
+    // Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'create_folder', 'group', %d, 'Created folder %s')", user_id, group_id, folder_name);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
     }
 
     send_status(client_sock, 2000); // Success
@@ -803,6 +838,13 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
             return;
         }
 
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'copy_file', 'group', %d, 'Copied file %s to directory %d')", user_id, group_id, row[0], target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
+
         printf("Debug: File copied and inserted into database successfully\n");
         mysql_free_result(res);
         send_status(client_sock, 2000); // Success
@@ -848,6 +890,13 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
 
         // Get the new directory ID
         int new_dir_id = mysql_insert_id(conn);
+
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'copy_folder', 'group', %d, 'Copied folder %s to directory %d')", user_id, group_id, dir_name, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
 
         // Copy subdirectories and files
         copy_subdirectories_and_files(client_sock, token, item_id, new_dir_id);
@@ -961,6 +1010,13 @@ void handle_move_item(int client_sock, const char *token, int item_id, int targe
             send_status(client_sock, 5000); // SQL update error
             return;
         }
+
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'move_file', 'group', %d, 'Moved file %d to directory %d')", user_id, group_id, item_id, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+        }
     }
     else
     {
@@ -970,6 +1026,13 @@ void handle_move_item(int client_sock, const char *token, int item_id, int targe
         {
             send_status(client_sock, 5000); // SQL update error
             return;
+        }
+
+        // Log the action
+        snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'move_folder', 'group', %d, 'Moved folder %d to directory %d')", user_id, group_id, item_id, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
         }
     }
 
@@ -1003,6 +1066,13 @@ void handle_rename_item(int client_sock, const char *token, int item_id, const c
     {
         send_status(client_sock, 5000); // SQL update error
         return;
+    }
+
+    // Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'rename_%s', 'group', %d, 'Renamed %s to %s')", user_id, is_file ? "file" : "folder", item_id, is_file ? "file" : "folder", new_name);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
     }
 
     send_status(client_sock, 2000); // Success

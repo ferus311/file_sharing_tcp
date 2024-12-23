@@ -118,7 +118,14 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
         return -1;
     }
 
-    // Step 5: Send the response back to the client
+    // Step 5: Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'create_group', 'group', %d, 'Created group %s')", user_id, group_id, group_name);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
+    // Step 6: Send the response back to the client
     char response[1024];
     snprintf(response, sizeof(response), "2000 %d\r\n", group_id);
     send(client_sock, response, strlen(response), 0);
@@ -213,7 +220,14 @@ int handle_request_join_group(int client_sock, const char *token, int group_id)
         return 5001;
     }
 
-    // Step 6: Send a success response back to the client
+    // Step 6: Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'request_join_group', 'group', %d, 'Requested to join group')", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
+    // Step 7: Send a success response back to the client
     send_message(client_sock, 2000, "Join request submitted successfully");
     return 2000;
 }
@@ -402,7 +416,14 @@ int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id)
         return 5000;
     }
 
-    // Step 6: Send the response back to the client
+    // Step 6: Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'invite_user_to_group', 'group', %d, 'Invited user %d to group')", invitee_id, group_id, invitee_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
+    // Step 7: Send the response back to the client
     send_message(client_sock, 2000, NULL); // Invitation sent successfully
     return 2000;
 }
@@ -444,7 +465,14 @@ int handle_leave_group(int client_sock, const char *token, int group_id)
         return -1;
     }
 
-    // Step 5: Send the response back to the client
+    // Step 5: Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'leave_group', 'group', %d, 'Left the group')", int_user_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
+    // Step 6: Send the response back to the client
     send_message(client_sock, 2000, NULL);
     return 2000;
 }
@@ -511,7 +539,14 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
         return -1;
     }
 
-    // Step 5: Send the response back to the client
+    // Step 5: Log the action
+    snprintf(query, sizeof(query), "INSERT INTO activity_log (user_id, action, target_type, target_id, details) VALUES (%d, 'remove_member', 'group', %d, 'Removed user %d from group')", get_user_id_by_token(token), group_id, user_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to log action: %s\n", mysql_error(conn));
+    }
+
+    // Step 6: Send the response back to the client
     send_message(client_sock, 2000, NULL);
     return 2000;
 }

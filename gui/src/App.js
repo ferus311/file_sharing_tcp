@@ -5,7 +5,6 @@ import { AuthProvider } from './context/AuthContext';
 
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import LogActivity from './pages/LogActivity';
 import Homepage from './pages/Homepage';
 import Invite from './pages/Invite';
 import JoinGroup from './pages/JoinGroup';
@@ -22,8 +21,6 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
-                    <Route path="/log-activity" element={<LogActivity />} />
-                    {/* <Route path="/group-members" element={<GroupMembers/>} /> */}
                     <Route
                         path="/group/:groupId"
                         element={
