@@ -73,6 +73,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         handleResponse(ipcRenderer.invoke('delete-folder', token, dirId)),
     deleteFile: (token, fileId) =>
         handleResponse(ipcRenderer.invoke('delete-file', token, fileId)),
+    copyItem: (token, itemId, targetDirId, isFile) =>
+        handleResponse(ipcRenderer.invoke('copy-item', token, itemId, targetDirId, isFile)),
+    renameItem: (token, itemId, newName, isFile) =>
+        handleResponse(ipcRenderer.invoke('rename-item', token, itemId, newName, isFile)),
+    moveItem: (token, itemId, targetDirId, isFile) =>
+        handleResponse(ipcRenderer.invoke('move-item', token, itemId, targetDirId, isFile)),
     on: (channel, func) => ipcRenderer.on(channel, func),
     off: (channel, func) => ipcRenderer.off(channel, func),
 });

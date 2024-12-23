@@ -231,49 +231,6 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     return 2000; // Thành công
 }
 
-// Upload file
-int upload_file(int client_sock, const char *user_id, const char *group_id, const char *data, const char *file_name, const char *file_size, const char *dir_id)
-{
-    char file_path[256];
-    snprintf(file_path, sizeof(file_path), "./data/%s/%s/%s", group_id, dir_id, file_name);
-
-    FILE *dest = fopen(file_path, "wb");
-    if (dest == NULL)
-    {
-        send_status(client_sock, 4040); // Lỗi mở file
-        return -1;
-    }
-
-    // Ghi dữ liệu vào file (giả sử dữ liệu được gửi sau yêu cầu)
-    char buffer[BUFFER_SIZE];
-    int bytes_read;
-    int remaining_size = atoi(file_size);
-
-    while ((bytes_read = recv(client_sock, buffer, BUFFER_SIZE, 0)) > 0 && remaining_size > 0)
-    {
-        fwrite(buffer, 1, bytes_read, dest);
-        remaining_size -= bytes_read;
-    }
-
-    fclose(dest);
-
-    // Thêm thông tin file vào cơ sở dữ liệu
-    char query[512];
-    snprintf(query, sizeof(query),
-             "INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id, dir_id) "
-             "VALUES ('%s', '%s', %s, %s, %s, %s)",
-             file_name, file_path, file_size, user_id, group_id, dir_id);
-
-    if (mysql_query(conn, query))
-    {
-        send_status(client_sock, 5000); // Lỗi chèn vào DB
-        return -1;
-    }
-
-    send_status(client_sock, 2000); // Thành công
-    return 0;
-}
-
 // Download file
 void handle_download_file(int client_sock, const char *token, int file_id)
 {
@@ -338,48 +295,6 @@ void handle_download_file(int client_sock, const char *token, int file_id)
 
     // Send status code 2000 when download is complete
     send_status(client_sock, 2000);
-}
-
-// Sửa tên file
-int rename_file(int client_sock, const char *user_id, const char *item_id, const char *new_name)
-{
-    char query[512];
-    snprintf(query, sizeof(query), "SELECT file_path FROM files WHERE file_id = %s", item_id);
-
-    if (mysql_query(conn, query))
-    {
-        send_status(client_sock, 5000); // Lỗi truy vấn
-        return -1;
-    }
-
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0)
-    {
-        send_status(client_sock, 4040); // File không tồn tại
-        mysql_free_result(res);
-        return -1;
-    }
-
-    MYSQL_ROW row = mysql_fetch_row(res);
-    char old_path[256];
-    snprintf(old_path, sizeof(old_path), "%s", row[0]);
-    mysql_free_result(res);
-
-    char new_path[256];
-    snprintf(new_path, sizeof(new_path), "./data/files/%s", new_name);
-
-    if (rename(old_path, new_path) == 0)
-    {
-        snprintf(query, sizeof(query), "UPDATE files SET file_name = '%s', file_path = '%s' WHERE file_id = %s", new_name, new_path, item_id);
-        if (mysql_query(conn, query) == 0)
-        {
-            send_status(client_sock, 2000); // Thành công
-            return 0;
-        }
-    }
-
-    send_status(client_sock, 5000); // Lỗi đổi tên
-    return -1;
 }
 
 // Xóa file
@@ -516,98 +431,6 @@ int handle_delete_folder(int client_sock, const char *token, int dir_id)
     }
 
     send_status(client_sock, 5000); // Lỗi xóa thư mục trong database
-    return -1;
-}
-
-// Sao chép file
-int copy_file(int client_sock, const char *user_id, const char *item_id, const char *target_directory_id)
-{
-    char query[512];
-    snprintf(query, sizeof(query), "SELECT file_name, file_path FROM files WHERE file_id = %s", item_id);
-
-    if (mysql_query(conn, query))
-    {
-        send_status(client_sock, 5000); // Lỗi truy vấn
-        return -1;
-    }
-
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0)
-    {
-        send_status(client_sock, 4040); // File không tồn tại
-        mysql_free_result(res);
-        return -1;
-    }
-
-    MYSQL_ROW row = mysql_fetch_row(res);
-    char source_path[256];
-    snprintf(source_path, sizeof(source_path), "%s", row[1]);
-
-    char dest_path[256];
-    snprintf(dest_path, sizeof(dest_path), "./data/%s/%s/%s", user_id, target_directory_id, row[0]);
-    mysql_free_result(res);
-
-    FILE *src = fopen(source_path, "rb");
-    FILE *dest = fopen(dest_path, "wb");
-    char buffer[BUFFER_SIZE];
-    size_t bytes;
-
-    if (src == NULL || dest == NULL)
-    {
-        send_status(client_sock, 4040); // File không tồn tại hoặc lỗi mở file
-        return -1;
-    }
-
-    while ((bytes = fread(buffer, 1, BUFFER_SIZE, src)) > 0)
-    {
-        fwrite(buffer, 1, bytes, dest);
-    }
-
-    fclose(src);
-    fclose(dest);
-    send_status(client_sock, 2000); // Thành công
-    return 0;
-}
-
-// Di chuyển file
-int move_file(int client_sock, const char *user_id, const char *item_id, const char *target_directory_id)
-{
-    char query[512];
-    snprintf(query, sizeof(query), "SELECT file_name, file_path FROM files WHERE file_id = %s", item_id);
-
-    if (mysql_query(conn, query))
-    {
-        send_status(client_sock, 5000); // Lỗi truy vấn
-        return -1;
-    }
-
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0)
-    {
-        send_status(client_sock, 4040); // File không tồn tại
-        mysql_free_result(res);
-        return -1;
-    }
-
-    MYSQL_ROW row = mysql_fetch_row(res);
-    char source_path[256];
-    snprintf(source_path, sizeof(source_path), "%s", row[1]);
-
-    char dest_path[256];
-    snprintf(dest_path, sizeof(dest_path), "./data/%s/%s/%s", user_id, target_directory_id, row[0]);
-    mysql_free_result(res);
-
-    if (rename(source_path, dest_path) == 0)
-    {
-        snprintf(query, sizeof(query), "UPDATE files SET file_path = '%s', dir_id = %s WHERE file_id = %s", dest_path, target_directory_id, item_id);
-        if (mysql_query(conn, query) == 0)
-        {
-            send_status(client_sock, 2000); // Thành công
-            return 0;
-        }
-    }
-
-    send_status(client_sock, 5000); // Lỗi di chuyển
     return -1;
 }
 
@@ -817,6 +640,368 @@ void handle_create_folder(int client_sock, const char *token, int group_id, int 
     if (mysql_query(conn, query))
     {
         send_status(client_sock, 5000); // SQL insert error
+        return;
+    }
+
+    send_status(client_sock, 2000); // Success
+}
+
+void handle_copy_item(int client_sock, const char *token, int item_id, int target_dir_id, int is_file)
+{
+    char query[512];
+    int user_id = get_user_id_by_token(token);
+
+    // Check if the token is valid
+    if (user_id == -1)
+    {
+        send_status(client_sock, 4030); // Invalid token
+        return;
+    }
+
+    printf("Debug: User ID: %d\n", user_id);
+
+    // Check if the target directory belongs to the user's group
+    snprintf(query, sizeof(query), "SELECT group_id FROM directories WHERE dir_id = %d", target_dir_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4040); // Directory not found
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    if (row == NULL)
+    {
+        send_status(client_sock, 4040); // Directory not found
+        mysql_free_result(res);
+        return;
+    }
+
+    int group_id = atoi(row[0]);
+    mysql_free_result(res);
+
+    printf("Debug: Group ID: %d\n", group_id);
+
+    // Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    row = mysql_fetch_row(res);
+    if (row == NULL || strcmp(row[0], "admin") != 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        mysql_free_result(res);
+        return;
+    }
+    mysql_free_result(res);
+
+    printf("Debug: User is admin\n");
+
+    if (is_file)
+    {
+        // Copy file
+        snprintf(query, sizeof(query), "SELECT file_name, file_path, file_size, uploaded_by FROM files WHERE file_id = %d", item_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        res = mysql_store_result(conn);
+        if (res == NULL || mysql_num_rows(res) == 0)
+        {
+            send_status(client_sock, 4040); // File not found
+            if (res)
+                mysql_free_result(res);
+            return;
+        }
+
+        row = mysql_fetch_row(res);
+        if (row == NULL)
+        {
+            send_status(client_sock, 4040); // File not found
+            mysql_free_result(res);
+            return;
+        }
+
+        char source_path[FILE_PATH_SIZE];
+        snprintf(source_path, sizeof(source_path), "%s", row[1]);
+        char dest_path[FILE_PATH_SIZE];
+        snprintf(dest_path, sizeof(dest_path), "uploads/group_%d/dir_%d/%s", group_id, target_dir_id, row[0]);
+
+        // Create destination directory if it does not exist
+        char dest_dir[FILE_PATH_SIZE];
+        snprintf(dest_dir, sizeof(dest_dir), "uploads/group_%d/dir_%d", group_id, target_dir_id);
+        if (mkdir(dest_dir, 0777) && errno != EEXIST)
+        {
+            perror("Failed to create destination directory");
+            send_status(client_sock, 5000); // Error creating directory
+            mysql_free_result(res);
+            return;
+        }
+
+        FILE *src = fopen(source_path, "rb");
+        if (src == NULL)
+        {
+            perror("Failed to open source file");
+            send_status(client_sock, 4040); // File not found or error opening file
+            mysql_free_result(res);
+            return;
+        }
+
+        FILE *dest = fopen(dest_path, "wb");
+        if (dest == NULL)
+        {
+            perror("Failed to open destination file");
+            fclose(src);
+            send_status(client_sock, 4040); // File not found or error opening file
+            mysql_free_result(res);
+            return;
+        }
+
+        char buffer[BUFFER_SIZE];
+        size_t bytes;
+        while ((bytes = fread(buffer, 1, BUFFER_SIZE, src)) > 0)
+        {
+            fwrite(buffer, 1, bytes, dest);
+        }
+
+        fclose(src);
+        fclose(dest);
+
+        // Insert the new file into the database
+        snprintf(query, sizeof(query),
+                 "INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id, dir_id) "
+                 "VALUES ('%s', '%s', %zu, %d, %d, %d)",
+                 row[0], dest_path, atoi(row[2]), atoi(row[3]), group_id, target_dir_id);
+
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL insert error
+            mysql_free_result(res);
+            return;
+        }
+
+        printf("Debug: File copied and inserted into database successfully\n");
+        mysql_free_result(res);
+        send_status(client_sock, 2000); // Success
+    }
+    else
+    {
+        // Copy directory
+        snprintf(query, sizeof(query), "SELECT dir_name FROM directories WHERE dir_id = %d", item_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        res = mysql_store_result(conn);
+        if (res == NULL || mysql_num_rows(res) == 0)
+        {
+            send_status(client_sock, 4040); // Directory not found
+            if (res)
+                mysql_free_result(res);
+            return;
+        }
+
+        row = mysql_fetch_row(res);
+        if (row == NULL)
+        {
+            send_status(client_sock, 4040); // Directory not found
+            mysql_free_result(res);
+            return;
+        }
+
+        char dir_name[256];
+        snprintf(dir_name, sizeof(dir_name), "%s", row[0]);
+        mysql_free_result(res);
+
+        // Insert the new directory into the database
+        snprintf(query, sizeof(query), "INSERT INTO directories (dir_name, parent_id, group_id, created_by) VALUES ('%s', %d, %d, %d)", dir_name, target_dir_id, group_id, user_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL insert error
+            return;
+        }
+
+        // Get the new directory ID
+        int new_dir_id = mysql_insert_id(conn);
+
+        // Copy subdirectories and files
+        copy_subdirectories_and_files(client_sock, token, item_id, new_dir_id);
+
+        send_status(client_sock, 2000); // Success
+    }
+}
+
+void copy_subdirectories_and_files(int client_sock, const char *token, int parent_dir_id, int new_parent_dir_id)
+{
+    char query[512];
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    // Copy subdirectories
+    snprintf(query, sizeof(query), "SELECT dir_id FROM directories WHERE parent_id = %d", parent_dir_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    res = mysql_store_result(conn);
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        handle_copy_item(client_sock, token, atoi(row[0]), new_parent_dir_id, 0);
+    }
+    mysql_free_result(res);
+
+    // Copy files
+    snprintf(query, sizeof(query), "SELECT file_id FROM files WHERE dir_id = %d", parent_dir_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    res = mysql_store_result(conn);
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        handle_copy_item(client_sock, token, atoi(row[0]), new_parent_dir_id, 1);
+    }
+    mysql_free_result(res);
+}
+
+void handle_move_item(int client_sock, const char *token, int item_id, int target_dir_id, int is_file)
+{
+    char query[512];
+    int user_id = get_user_id_by_token(token);
+
+    // Check if the token is valid
+    if (user_id == -1)
+    {
+        send_status(client_sock, 4030); // Invalid token
+        return;
+    }
+
+    // Check if the target directory belongs to the user's group
+    snprintf(query, sizeof(query), "SELECT group_id FROM directories WHERE dir_id = %d", target_dir_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4040); // Directory not found
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int group_id = atoi(row[0]);
+    mysql_free_result(res);
+
+    // Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    row = mysql_fetch_row(res);
+    if (strcmp(row[0], "admin") != 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        mysql_free_result(res);
+        return;
+    }
+    mysql_free_result(res);
+
+    if (is_file)
+    {
+        // Move file
+        snprintf(query, sizeof(query), "UPDATE files SET dir_id = %d WHERE file_id = %d", target_dir_id, item_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL update error
+            return;
+        }
+    }
+    else
+    {
+        // Move directory
+        snprintf(query, sizeof(query), "UPDATE directories SET parent_id = %d WHERE dir_id = %d", target_dir_id, item_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL update error
+            return;
+        }
+    }
+
+    send_status(client_sock, 2000); // Success
+}
+
+void handle_rename_item(int client_sock, const char *token, int item_id, const char *new_name, int is_file)
+{
+    char query[512];
+    int user_id = get_user_id_by_token(token);
+
+    // Check if the token is valid
+    if (user_id == -1)
+    {
+        send_status(client_sock, 4030); // Invalid token
+        return;
+    }
+
+    if (is_file)
+    {
+        // Rename file
+        snprintf(query, sizeof(query), "UPDATE files SET file_name = '%s' WHERE file_id = %d", new_name, item_id);
+    }
+    else
+    {
+        // Rename directory
+        snprintf(query, sizeof(query), "UPDATE directories SET dir_name = '%s' WHERE dir_id = %d", new_name, item_id);
+    }
+
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL update error
         return;
     }
 

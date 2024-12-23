@@ -24,7 +24,7 @@ void handle_client_request(int client_sock);
 void parse_message(const char *message, char *command, char *token, char *data);
 void handle_command(int client_sock, const char *command, const char *token, const char *data);
 void split(const char *str, const char *delim, char **out, int max_datas);
-void handle_create_folder(int client_sock, const char *token, int group_id, int parent_dir_id, const char *folder_name);
+
 
 int main()
 {
@@ -313,8 +313,18 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "RENAME_ITEM") == 0)
     {
-        split(data, "||", datas, 2);
-        // Handle rename item with token, item ID, and new name
+        split(data, "||", datas, 3);
+        int item_id = atoi(datas[0]);
+        int is_file;
+        if (strcmp(datas[2], "true") == 0)
+        {
+            is_file = 1;
+        }
+        else
+        {
+            is_file = 0;
+        }
+        handle_rename_item(client_sock, token, item_id, datas[1], is_file);
     }
     else if (strcmp(command, "DELETE_FOLDER") == 0)
     {
@@ -330,13 +340,35 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "COPY_ITEM") == 0)
     {
-        split(data, "||", datas, 2);
-        // Handle copy item with token, item ID, and target directory ID
+        split(data, "||", datas, 3);
+        int item_id = atoi(datas[0]);
+        int target_dir_id = atoi(datas[1]);
+        int is_file; // 1 if file, 0 if folder
+        if (strcmp(datas[2], "true") == 0)
+        {
+            is_file = 1;
+        }
+        else
+        {
+            is_file = 0;
+        }
+        handle_copy_item(client_sock, token, item_id, target_dir_id, is_file);
     }
     else if (strcmp(command, "MOVE_ITEM") == 0)
     {
-        split(data, "||", datas, 2);
-        // Handle move item with token, item ID, and target directory ID
+        split(data, "||", datas, 3);
+        int item_id = atoi(datas[0]);
+        int target_dir_id = atoi(datas[1]);
+        int is_file; // 1 if file, 0 if folder
+        if (strcmp(datas[2], "true") == 0)
+        {
+            is_file = 1;
+        }
+        else
+        {
+            is_file = 0;
+        }
+        handle_move_item(client_sock, token, item_id, target_dir_id, is_file);
     }
     else if (strcmp(command, "LIST_ADMIN_GROUPS") == 0)
     {

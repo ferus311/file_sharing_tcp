@@ -273,3 +273,21 @@ ipcMain.handle('create-folder', async (event, token, groupId, parentDirId, folde
     const message = `CREATE_FOLDER ${token} ${groupId}||${parentDirId}||${folderName}\r\n`;
     return connectionManager.sendMessage(message);
 });
+
+ipcMain.handle('copy-item', async (event, token, itemID, targetDirId, isFile) => {
+    await connectionManager.connect();
+    const message = `COPY_ITEM ${token} ${itemID}||${targetDirId}||${isFile}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('rename-item', async (event, token, itemId, newName, isFile) => {
+    await connectionManager.connect();
+    const message = `RENAME_ITEM ${token} ${itemId}||${newName}||${isFile}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('move-item', async (event, token, itemId, targetDirId, isFile) => {
+    await connectionManager.connect();
+    const message = `MOVE_ITEM ${token} ${itemId}||${targetDirId}||${isFile}\r\n`;
+    return connectionManager.sendMessage(message);
+});

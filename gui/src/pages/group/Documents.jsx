@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Card, List, Avatar, message, Button, Popconfirm, Modal, Input, Upload, Spin } from 'antd';
-import { FolderOutlined, FileOutlined, DeleteOutlined, UploadOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
+import { FolderOutlined, FileOutlined, DeleteOutlined, UploadOutlined, PlusOutlined, DownloadOutlined, CopyOutlined, EditOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
@@ -19,6 +19,18 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
     const [uploadingFileName, setUploadingFileName] = useState('');
     const [overwriteConfirmVisible, setOverwriteConfirmVisible] = useState(false);
     const [fileToUpload, setFileToUpload] = useState(null);
+
+    const [copying, setCopying] = useState(false);
+    const [itemToCopy, setItemToCopy] = useState(null);
+    const [targetDirId, setTargetDirId] = useState(null);
+
+    const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
+    const [newItemName, setNewItemName] = useState('');
+    const [itemToRename, setItemToRename] = useState(null);
+
+    const [isMoveModalVisible, setIsMoveModalVisible] = useState(false);
+    const [itemToMove, setItemToMove] = useState(null);
+    const [moveTargetDirId, setMoveTargetDirId] = useState(null);
 
     useEffect(() => {
         fetchListGroupContent();
@@ -204,6 +216,73 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
         }
     };
 
+    const handleCopyItem = async () => {
+        if (!itemToCopy || !targetDirId) return;
+        setCopying(true);
+        try {
+            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
+            const response = await window.electronAPI.copyItem(cleanToken, itemToCopy.id, targetDirId, itemToCopy.type === 'F');
+            if (response.startsWith('2000')) {
+                message.success('Item copied successfully.');
+                fetchListGroupContent();
+            } else {
+                console.error('Failed to copy item:', response);
+                message.error('An error occurred while copying the item.');
+            }
+        } catch (error) {
+            console.error('Error copying item:', error);
+            message.error('An error occurred while copying the item.');
+        } finally {
+            setCopying(false);
+            setItemToCopy(null);
+            setTargetDirId(null);
+        }
+    };
+
+    const handleRenameItem = async () => {
+        if (!itemToRename || !newItemName) return;
+        try {
+            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
+            const response = await window.electronAPI.renameItem(cleanToken, itemToRename.id, newItemName, itemToRename.type === 'F');
+            if (response.startsWith('2000')) {
+                message.success('Item renamed successfully.');
+                fetchListGroupContent();
+            } else {
+                console.error('Failed to rename item:', response);
+                message.error('An error occurred while renaming the item.');
+            }
+        } catch (error) {
+            console.error('Error renaming item:', error);
+            message.error('An error occurred while renaming the item.');
+        } finally {
+            setIsRenameModalVisible(false);
+            setNewItemName('');
+            setItemToRename(null);
+        }
+    };
+
+    const handleMoveItem = async () => {
+        if (!itemToMove || !moveTargetDirId) return;
+        try {
+            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
+            const response = await window.electronAPI.moveItem(cleanToken, itemToMove.id, moveTargetDirId, itemToMove.type === 'F');
+            if (response.startsWith('2000')) {
+                message.success('Item moved successfully.');
+                fetchListGroupContent();
+            } else {
+                console.error('Failed to move item:', response);
+                message.error('An error occurred while moving the item.');
+            }
+        } catch (error) {
+            console.error('Error moving item:', error);
+            message.error('An error occurred while moving the item.');
+        } finally {
+            setIsMoveModalVisible(false);
+            setMoveTargetDirId(null);
+            setItemToMove(null);
+        }
+    };
+
     return (
         <>
             {uploading && (
@@ -220,6 +299,48 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                 cancelText="Cancel"
             >
                 <p>A file with the same name already exists. Do you want to overwrite it?</p>
+            </Modal>
+            <Modal
+                title="Copy Item"
+                visible={!!itemToCopy}
+                onOk={handleCopyItem}
+                onCancel={() => setItemToCopy(null)}
+                okText="Copy"
+                cancelText="Cancel"
+            >
+                <Input
+                    placeholder="Enter target directory ID"
+                    value={targetDirId}
+                    onChange={(e) => setTargetDirId(e.target.value)}
+                />
+            </Modal>
+            <Modal
+                title="Rename Item"
+                visible={isRenameModalVisible}
+                onOk={handleRenameItem}
+                onCancel={() => setIsRenameModalVisible(false)}
+                okText="Rename"
+                cancelText="Cancel"
+            >
+                <Input
+                    placeholder="Enter new item name"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                />
+            </Modal>
+            <Modal
+                title="Move Item"
+                visible={isMoveModalVisible}
+                onOk={handleMoveItem}
+                onCancel={() => setIsMoveModalVisible(false)}
+                okText="Move"
+                cancelText="Cancel"
+            >
+                <Input
+                    placeholder="Enter target directory ID"
+                    value={moveTargetDirId}
+                    onChange={(e) => setMoveTargetDirId(e.target.value)}
+                />
             </Modal>
             <div>
                 {isAdmin === 1 ? "ADMIN" : "MEMBER"}
@@ -286,6 +407,32 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                                             }}
                                         />
                                     )}
+                                    <Button
+                                        type="text"
+                                        icon={<CopyOutlined />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setItemToCopy(item);
+                                        }}
+                                    />
+                                    <Button
+                                        type="text"
+                                        icon={<EditOutlined />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setItemToRename(item);
+                                            setIsRenameModalVisible(true);
+                                        }}
+                                    />
+                                    <Button
+                                        type="text"
+                                        icon={<ArrowRightOutlined />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setItemToMove(item);
+                                            setIsMoveModalVisible(true);
+                                        }}
+                                    />
                                 </>
                             }
                         >

@@ -138,6 +138,7 @@ const GroupDetail = () => {
             <Breadcrumb style={{ margin: '16px' }}>
                 <Breadcrumb.Item>Home</Breadcrumb.Item>
                 <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
+                <Breadcrumb.Item>Root Dir Id : {rootDirId}</Breadcrumb.Item>
             </Breadcrumb>
             <Content style={{ padding: 24 }}>
                 {renderContent()}
