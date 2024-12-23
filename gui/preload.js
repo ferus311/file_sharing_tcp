@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         handleResponse(ipcRenderer.invoke('list-group-members', token, groupId)),
     listRequests: (token, groupId) =>
         handleResponse(ipcRenderer.invoke('list-requests', token, groupId)),
+    listAdminGroups: (token) =>
+        handleResponse(ipcRenderer.invoke('list-admin-groups', token)),
     requestJoinGroup: (token, groupId) =>
         handleResponse(ipcRenderer.invoke('request-join-group', token, groupId)),
     inviteUserToGroup: (token, groupId, inviteeId) =>
@@ -59,16 +61,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         handleResponse(ipcRenderer.invoke('list-directory-content', token, groupId, directoryId)),
     listGroupContent: (token, groupId) =>
         handleResponse(ipcRenderer.invoke('list-group-content', token, groupId)),
-    uploadFile: (token, groupId, dataString) =>
-        handleResponse(ipcRenderer.invoke('upload-file', token, groupId, dataString)),
-    createFolder: (token, groupId, folderName) =>
-        handleResponse(ipcRenderer.invoke('create-folder', token, groupId, folderName)),
+    uploadFile: (token, groupId, dirId, dataString) =>
+        handleResponse(ipcRenderer.invoke('upload-file', token, groupId, dirId, dataString)),
+    createFolder: (token, groupId, parentDirId, dirName) =>
+        handleResponse(ipcRenderer.invoke('create-folder', token, groupId, parentDirId, dirName)),
     fetchFileDetail: (token, groupId, fileId) =>
         handleResponse(ipcRenderer.invoke('file-detail', token, groupId, fileId)),
-    downloadFile: (token, fileId) =>
-        handleResponse(ipcRenderer.invoke('download-file', token, fileId)),
-    deleteDir: (token, dirId) =>
-        handleResponse(ipcRenderer.invoke('delete-dir', token, dirId)),
+    downloadFile: (token, fileId, fileName) =>
+        handleResponse(ipcRenderer.invoke('download-file', token, fileId, fileName)),
+    deleteFolder: (token, dirId) =>
+        handleResponse(ipcRenderer.invoke('delete-folder', token, dirId)),
     deleteFile: (token, fileId) =>
         handleResponse(ipcRenderer.invoke('delete-file', token, fileId)),
     on: (channel, func) => ipcRenderer.on(channel, func),

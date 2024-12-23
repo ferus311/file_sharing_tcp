@@ -26,7 +26,7 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
                 message.success('Member removed successfully');
                 fetchGroupMembers();
             } else {
-                message.error('Failed to remove member');    
+                message.error('Failed to remove member');
                 console.error('Failed to remove member:', response);
             }
         } catch (error) {
@@ -35,7 +35,7 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
         }
     };
 
-    const fetchGroupMembers = async () => { 
+    const fetchGroupMembers = async () => {
         console.log("----------Start fetchGroupMembers-----------")
         try {
             const response = await window.electronAPI.listGroupMembers(token, groupId);
@@ -60,8 +60,8 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
 
     return (
         <div className="container">
-            <div>  
-                {isAdmin === 1 ? "ADMIN" : "MEMBER"} 
+            <div>
+                {isAdmin === 1 ? "ADMIN" : "MEMBER"}
             </div>
             <List
                 itemLayout="horizontal"

@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS directories (
     group_id INT NOT NULL,
     created_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (parent_id) REFERENCES directories(dir_id) ON DELETE SET NULL,
+    FOREIGN KEY (parent_id) REFERENCES directories(dir_id) ON DELETE CASCADE,
     FOREIGN KEY (group_id) REFERENCES `groups`(group_id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(user_id)
 );

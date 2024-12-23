@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { use } from 'react';
 
 const AuthContext = createContext();
 
@@ -6,8 +7,16 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token') || '');
     const [username, setUsername] = useState(localStorage.getItem('username') || '');
     const [allGroup, setAllGroup] = useState([]);
+    const [adminGroups, setAdminGroups] = useState([]);
 
-
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+        if (token && username) {
+            setToken(token);
+            setUsername(username);
+        }
+    }, []);
     const login = (token, username) => {
         setToken(token);
         setUsername(username);
@@ -36,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ token, username, login, logout, allGroup, setAllGroup }}>
+        <AuthContext.Provider value={{ token, username, login, logout, allGroup, setAllGroup, adminGroups }}>
             {children}
         </AuthContext.Provider>
     );

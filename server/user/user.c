@@ -56,17 +56,22 @@ int handle_registration(int client_sock, const char *username, const char *passw
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        return -1;
+    }
+
     if (mysql_num_rows(res) > 0) {
         send(client_sock, "4090\r\n", 6, 0);  // Username already exists
         mysql_free_result(res);
         return 4090;
     }
+    mysql_free_result(res);
 
     snprintf(query, sizeof(query), "INSERT INTO users (username, password) VALUES ('%s', '%s')", username, password);
 
     if (mysql_query(conn, query)) {
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
-        mysql_free_result(res);
         return -1;
     }
 
@@ -74,11 +79,21 @@ int handle_registration(int client_sock, const char *username, const char *passw
     snprintf(query, sizeof(query), "SELECT user_id FROM users WHERE username = '%s'", username);
     if (mysql_query(conn, query)) {
         fprintf(stderr, "SELECT user_id failed. Error: %s\n", mysql_error(conn));
-        mysql_free_result(res);
         return -1;
     }
     res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        return -1;
+    }
+
     MYSQL_ROW row = mysql_fetch_row(res);
+    if (row == NULL) {
+        fprintf(stderr, "mysql_fetch_row() failed. Error: %s\n", mysql_error(conn));
+        mysql_free_result(res);
+        return -1;
+    }
+
     char token[512];
     create_token(row[0], token);
     mysql_free_result(res);

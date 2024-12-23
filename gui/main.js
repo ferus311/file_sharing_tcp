@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, dialog } = require('electron');
 const path = require('path');
 const net = require('net');
 const fs = require('fs');
@@ -179,15 +179,15 @@ ipcMain.handle('delete-file', async (event, token, fileId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('delete-dir', async (event, token, dirId) => {
+ipcMain.handle('delete-folder', async (event, token, dirId) => {
     await connectionManager.connect();
-    const message = `LIST_GROUP_CONTENT ${token} ${groupId}\r\n`;
+    const message = `DELETE_FOLDER ${token} ${dirId}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('upload-file', async (event, token, groupId, dataString) => {
+ipcMain.handle('upload-file', async (event, token, groupId, dirId, dataString) => {
     await connectionManager.connect();
-    const message = `UPLOAD_FILE ${token} ${groupId}||${dataString}\r\n`;
+    const message = `UPLOAD_FILE ${token} ${groupId}||${dirId}||${dataString}\r\n`;
     return connectionManager.sendMessage(message);
 });
 
@@ -197,9 +197,22 @@ ipcMain.handle('file-detail', async (event, token, groupId, fileId) => {
     return connectionManager.sendMessage(message);
 });
 
-ipcMain.handle('download-file', async (event, token, fileId) => {
+ipcMain.handle('download-file', async (event, token, fileId, fileName) => {
     const client = new net.Socket();
-    const filePath = path.join(app.getPath('downloads'), `${fileId}.downloaded`); // Lưu file trong thư mục Downloads
+    const filePath = path.join(app.getPath('downloads'), `${fileName}`); // Lưu file trong thư mục Downloads
+
+    if (fs.existsSync(filePath)) {
+        const { response } = await dialog.showMessageBox({
+            type: 'question',
+            buttons: ['Overwrite', 'Cancel'],
+            title: 'File Exists',
+            message: `The file ${fileName} already exists. Do you want to overwrite it?`,
+        });
+
+        if (response === 1) {
+            return { success: false, message: 'Download cancelled by user' };
+        }
+    }
 
     return new Promise((resolve, reject) => {
         let fileStream;
@@ -221,6 +234,13 @@ ipcMain.handle('download-file', async (event, token, fileId) => {
             client.on('end', () => {
                 console.log('Download complete');
                 fileStream.close();
+                event.sender.send('download-complete', { success: true, filePath });
+
+                new Notification({
+                    title: 'Download Complete',
+                    body: `File ${fileName} has been downloaded successfully in Downloads.`,
+                }).show();
+
                 resolve({ success: true, filePath });
             });
 
@@ -240,4 +260,16 @@ ipcMain.handle('logout', async () => {
     // Handle logout logic here, e.g., clear session, redirect to login page, etc.
     console.log('Session expired. Logging out...');
     mainWindow.webContents.send('logout');
+});
+
+ipcMain.handle('list-admin-groups', async (event, token) => {
+    await connectionManager.connect();
+    const message = `LIST_ADMIN_GROUPS ${token}\r\n`;
+    return connectionManager.sendMessage(message);
+});
+
+ipcMain.handle('create-folder', async (event, token, groupId, parentDirId, folderName) => {
+    await connectionManager.connect();
+    const message = `CREATE_FOLDER ${token} ${groupId}||${parentDirId}||${folderName}\r\n`;
+    return connectionManager.sendMessage(message);
 });

@@ -24,6 +24,7 @@ void handle_client_request(int client_sock);
 void parse_message(const char *message, char *command, char *token, char *data);
 void handle_command(int client_sock, const char *command, const char *token, const char *data);
 void split(const char *str, const char *delim, char **out, int max_datas);
+void handle_create_folder(int client_sock, const char *token, int group_id, int parent_dir_id, const char *folder_name);
 
 int main()
 {
@@ -115,71 +116,6 @@ int main()
     close(server_sock);
 
     return 0;
-}
-
-void handle_download_file(int client_sock, const char *token, int file_id)
-{
-    printf("Debug: handle_download_file called with token: %s, file_id: %d\n", token, file_id);
-
-    // Kiểm tra token và quyền truy cập (nếu cần)
-    // ...
-
-    // Truy vấn cơ sở dữ liệu để lấy thông tin tệp
-    char query[BUFFER_SIZE];
-    snprintf(query, sizeof(query), "SELECT file_name, file_path FROM files WHERE file_id = %d", file_id);
-
-    if (mysql_query(conn, query))
-    {
-        fprintf(stderr, "Failed to query file info: %s\n", mysql_error(conn));
-        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
-        return;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (result == NULL)
-    {
-        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
-        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
-        return;
-    }
-
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (row == NULL)
-    {
-        send(client_sock, "404 File Not Found", strlen("404 File Not Found"), 0);
-        mysql_free_result(result);
-        return;
-    }
-
-    const char *file_name = row[0];
-    const char *file_path = row[1];
-    printf("Debug: file_name: %s, file_path: %s\n", file_name, file_path);
-
-    // Mở tệp để đọc
-    FILE *file = fopen(file_path, "rb");
-    if (file == NULL)
-    {
-        perror("Failed to open file");
-        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
-        mysql_free_result(result);
-        return;
-    }
-
-    // Gửi tệp về client
-    char buffer[BUFFER_SIZE];
-    size_t bytes_read;
-    while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
-    {
-        if (send(client_sock, buffer, bytes_read, 0) < 0)
-        {
-            perror("Failed to send file");
-            break;
-        }
-        printf("Debug: Sent %zu bytes\n", bytes_read);
-    }
-
-    fclose(file);
-    mysql_free_result(result);
 }
 
 void handle_client_request(int client_sock)
@@ -364,10 +300,10 @@ void handle_command(int client_sock, const char *command, const char *token, con
     }
     else if (strcmp(command, "UPLOAD_FILE") == 0)
     {
-        int group_id;
+        int group_id, dir_id;
         char remaining_data[BUFFER_SIZE * 4]; // Increased size for base64 data
-        sscanf(data, "%d||%4095[^\r\n]", &group_id, remaining_data);
-        handle_receive_file_chunk(client_sock, token, group_id, remaining_data);
+        sscanf(data, "%d||%d||%4095[^\r\n]", &group_id, &dir_id, remaining_data);
+        handle_receive_file_chunk(client_sock, token, group_id, dir_id, remaining_data);
     }
     else if (strcmp(command, "DOWNLOAD_FILE") == 0)
     {
@@ -380,11 +316,11 @@ void handle_command(int client_sock, const char *command, const char *token, con
         split(data, "||", datas, 2);
         // Handle rename item with token, item ID, and new name
     }
-    else if (strcmp(command, "DELETE_DIR") == 0)
+    else if (strcmp(command, "DELETE_FOLDER") == 0)
     {
         split(data, "||", datas, 1);
         int dir_id = atoi(datas[0]);
-        handle_delete_dir(client_sock, token, dir_id);
+        handle_delete_folder(client_sock, token, dir_id);
     }
     else if (strcmp(command, "DELETE_FILE") == 0)
     {
@@ -401,6 +337,17 @@ void handle_command(int client_sock, const char *command, const char *token, con
     {
         split(data, "||", datas, 2);
         // Handle move item with token, item ID, and target directory ID
+    }
+    else if (strcmp(command, "LIST_ADMIN_GROUPS") == 0)
+    {
+        handle_list_admin_groups(client_sock, token);
+    }
+    else if (strcmp(command, "CREATE_FOLDER") == 0)
+    {
+        split(data, "||", datas, 3);
+        int group_id = atoi(datas[0]);
+        int parent_dir_id = atoi(datas[1]);
+        handle_create_folder(client_sock, token, group_id, parent_dir_id, datas[2]);
     }
     else
     {

@@ -52,15 +52,17 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
     while ((row = mysql_fetch_row(res)) != NULL)
     {
-        if (row[0] == NULL || row[1] == NULL) {
+        if (row[0] == NULL || row[1] == NULL)
+        {
             continue; // Bỏ qua nếu dữ liệu NULL
         }
 
         int dir_id = atoi(row[0]); // id thư mục
-        char *dir_name = row[1];    // tên thư mục
+        char *dir_name = row[1];   // tên thư mục
 
         // Kiểm tra xem có đủ không gian trong response buffer
-        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response)) {
+        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response))
+        {
             fprintf(stderr, "Buffer overflow detected in response.\n");
             send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
             mysql_free_result(res);
@@ -92,15 +94,17 @@ int handle_list_group_content(int client_sock, const char *token, int group_id)
     // Duyệt qua các tệp và thêm vào kết quả phản hồi
     while ((row2 = mysql_fetch_row(res2)) != NULL)
     {
-        if (row2[0] == NULL || row2[1] == NULL) {
+        if (row2[0] == NULL || row2[1] == NULL)
+        {
             continue; // Bỏ qua nếu dữ liệu NULL
         }
 
         int file_id = atoi(row2[0]); // id tệp
-        char *file_name = row2[1];    // tên tệp
+        char *file_name = row2[1];   // tên tệp
 
         // Kiểm tra xem có đủ không gian trong response buffer
-        if (strlen(response) + strlen(file_name) + 10 > sizeof(response)) {
+        if (strlen(response) + strlen(file_name) + 10 > sizeof(response))
+        {
             fprintf(stderr, "Buffer overflow detected in response.\n");
             send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
             mysql_free_result(res2);
@@ -149,15 +153,17 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     // Duyệt qua các thư mục con và thêm vào kết quả phản hồi
     while ((row = mysql_fetch_row(res)) != NULL)
     {
-        if (row[0] == NULL || row[1] == NULL) {
+        if (row[0] == NULL || row[1] == NULL)
+        {
             continue; // Bỏ qua nếu dữ liệu NULL
         }
 
         int dir_id = atoi(row[0]); // id thư mục
-        char *dir_name = row[1];    // tên thư mục
+        char *dir_name = row[1];   // tên thư mục
 
         // Kiểm tra xem có đủ không gian trong response buffer
-        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response)) {
+        if (strlen(response) + strlen(dir_name) + 10 > sizeof(response))
+        {
             fprintf(stderr, "Buffer overflow detected in response.\n");
             send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
             mysql_free_result(res);
@@ -189,15 +195,17 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
     // Duyệt qua các tệp và thêm vào kết quả phản hồi
     while ((row2 = mysql_fetch_row(res2)) != NULL)
     {
-        if (row2[0] == NULL || row2[1] == NULL) {
+        if (row2[0] == NULL || row2[1] == NULL)
+        {
             continue; // Bỏ qua nếu dữ liệu NULL
         }
 
         int file_id = atoi(row2[0]); // id tệp
-        char *file_name = row2[1];    // tên tệp
+        char *file_name = row2[1];   // tên tệp
 
         // Kiểm tra xem có đủ không gian trong response buffer
-        if (strlen(response) + strlen(file_name) + 10 > sizeof(response)) {
+        if (strlen(response) + strlen(file_name) + 10 > sizeof(response))
+        {
             fprintf(stderr, "Buffer overflow detected in response.\n");
             send(client_sock, "5000\r\n", 6, 0); // Lỗi bộ đệm
             mysql_free_result(res2);
@@ -267,52 +275,69 @@ int upload_file(int client_sock, const char *user_id, const char *group_id, cons
 }
 
 // Download file
-int download_file(int client_sock, const char *user_id, const char *file_id, const char *file_size)
+void handle_download_file(int client_sock, const char *token, int file_id)
 {
-    char query[512];
-    snprintf(query, sizeof(query), "SELECT file_path FROM files WHERE file_id = %s", file_id);
+    printf("Debug: handle_download_file called with token: %s, file_id: %d\n", token, file_id);
+
+    // Truy vấn cơ sở dữ liệu để lấy thông tin tệp
+    char query[BUFFER_SIZE];
+    snprintf(query, sizeof(query), "SELECT file_name, file_path FROM files WHERE file_id = %d", file_id);
 
     if (mysql_query(conn, query))
     {
-        send_status(client_sock, 5000); // Lỗi truy vấn
-        return -1;
+        fprintf(stderr, "Failed to query file info: %s\n", mysql_error(conn));
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        return;
     }
 
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL)
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (result == NULL)
     {
-        send_status(client_sock, 4040); // File không tồn tại
-        return -1;
+        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        return;
     }
 
-    MYSQL_ROW row = mysql_fetch_row(res);
+    MYSQL_ROW row = mysql_fetch_row(result);
     if (row == NULL)
     {
-        send_status(client_sock, 4040);
-        mysql_free_result(res);
-        return -1;
+        send(client_sock, "404 File Not Found", strlen("404 File Not Found"), 0);
+        mysql_free_result(result);
+        return;
     }
 
-    FILE *src = fopen(row[0], "rb");
-    mysql_free_result(res);
+    const char *file_name = row[0];
+    const char *file_path = row[1];
+    printf("Debug: file_name: %s, file_path: %s\n", file_name, file_path);
 
-    if (src == NULL)
+    // Mở tệp để đọc
+    FILE *file = fopen(file_path, "rb");
+    if (file == NULL)
     {
-        send_status(client_sock, 4040); // File không tồn tại
-        return -1;
+        perror("Failed to open file");
+        send(client_sock, "500 Internal Server Error", strlen("500 Internal Server Error"), 0);
+        mysql_free_result(result);
+        return;
     }
 
-    send_status(client_sock, 2000); // Thành công
-
+    // Gửi tệp về client
     char buffer[BUFFER_SIZE];
-    int bytes;
-    while ((bytes = fread(buffer, 1, BUFFER_SIZE, src)) > 0)
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
     {
-        send(client_sock, buffer, bytes, 0);
+        if (send(client_sock, buffer, bytes_read, 0) < 0)
+        {
+            perror("Failed to send file");
+            break;
+        }
+        printf("Debug: Sent %zu bytes\n", bytes_read);
     }
 
-    fclose(src);
-    return 0;
+    fclose(file);
+    mysql_free_result(result);
+
+    // Send status code 2000 when download is complete
+    send_status(client_sock, 2000);
 }
 
 // Sửa tên file
@@ -366,13 +391,15 @@ int handle_delete_file(int client_sock, const char *token, int file_id)
     // Truy vấn file để lấy thông tin file_path, uploaded_by và group_id
     snprintf(query, sizeof(query), "SELECT file_path, uploaded_by, group_id FROM files WHERE file_id = %d", file_id);
 
-    if (mysql_query(conn, query)) {
+    if (mysql_query(conn, query))
+    {
         send_status(client_sock, 5000); // Lỗi truy vấn SQL
         return -1;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0) {
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
         send_status(client_sock, 4040); // File không tồn tại
         mysql_free_result(res);
         return -1;
@@ -380,44 +407,46 @@ int handle_delete_file(int client_sock, const char *token, int file_id)
 
     MYSQL_ROW row = mysql_fetch_row(res);
     char file_path[500];
-    // int uploaded_by = atoi(row[1]);
     int group_id = atoi(row[2]);
     snprintf(file_path, sizeof(file_path), "%s", row[0]);
     mysql_free_result(res);
 
-    // Kiểm tra quyền: tìm created_by trong bảng groups
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
-    if (mysql_query(conn, query)) {
+    // Kiểm tra quyền: tìm role trong bảng user_groups
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
         send_status(client_sock, 5000); // Lỗi truy vấn SQL
         return -1;
     }
 
     res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0) {
-        send_status(client_sock, 4040); // Group không tồn tại
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4030); // Không có quyền xóa file
         mysql_free_result(res);
         return -1;
     }
 
     row = mysql_fetch_row(res);
-    int created_by = atoi(row[0]);
+    if (strcmp(row[0], "admin") != 0)
+    {
+        send_status(client_sock, 4030); // Không có quyền xóa file
+        mysql_free_result(res);
+        return -1;
+    }
     mysql_free_result(res);
 
-    // Kiểm tra quyền xóa file: user_id phải là uploaded_by hoặc created_by
-    if (user_id != created_by) {
-        send_status(client_sock, 4030); // Không có quyền xóa file
+    // Xóa file trong hệ thống
+    if (remove(file_path) != 0)
+    {
+        send_status(client_sock, 5000); // Lỗi xóa file trong hệ thống
         return -1;
     }
 
-    // Xóa file trong hệ thống
-    // if (remove(file_path) != 0) {
-    //     send_status(client_sock, 5000); // Lỗi xóa file trong hệ thống
-    //     return -1;
-    // }
-
     // Xóa file trong cơ sở dữ liệu
     snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %d", file_id);
-    if (mysql_query(conn, query) == 0) {
+    if (mysql_query(conn, query) == 0)
+    {
         send_status(client_sock, 2000); // Xóa file thành công
         return 0;
     }
@@ -426,60 +455,62 @@ int handle_delete_file(int client_sock, const char *token, int file_id)
     return -1;
 }
 
-// Xóa thư mục
-int handle_delete_dir(int client_sock, const char *token, int dir_id) {
+int handle_delete_folder(int client_sock, const char *token, int dir_id)
+{
     char query[512];
     int user_id = get_user_id_by_token(token);
 
-    // Truy vấn để lấy thông tin `created_by` và `group_id` của thư mục
-    snprintf(query, sizeof(query), "SELECT created_by, group_id FROM directories WHERE dir_id = %d", dir_id);
+    // Truy vấn để lấy thông tin `group_id` của thư mục
+    snprintf(query, sizeof(query), "SELECT group_id FROM directories WHERE dir_id = %d", dir_id);
 
-    if (mysql_query(conn, query)) {
+    if (mysql_query(conn, query))
+    {
         send_status(client_sock, 5000); // Lỗi truy vấn SQL
         return -1;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0) {
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
         send_status(client_sock, 4040); // Thư mục không tồn tại
         mysql_free_result(res);
         return -1;
     }
 
     MYSQL_ROW row = mysql_fetch_row(res);
-    // int dir_created_by = atoi(row[0]); // Người tạo thư mục
-    int group_id = atoi(row[1]);       // group_id chứa thư mục
+    int group_id = atoi(row[0]); // group_id chứa thư mục
     mysql_free_result(res);
 
-    // Truy vấn `created_by` của nhóm để xác định người tạo nhóm
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
-
-    if (mysql_query(conn, query)) {
+    // Kiểm tra quyền xóa: user_id phải là admin của nhóm
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
         send_status(client_sock, 5000); // Lỗi truy vấn SQL
         return -1;
     }
 
     res = mysql_store_result(conn);
-    if (res == NULL || mysql_num_rows(res) == 0) {
-        send_status(client_sock, 4040); // Nhóm không tồn tại
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4030); // Không có quyền xóa thư mục
         mysql_free_result(res);
         return -1;
     }
 
     row = mysql_fetch_row(res);
-    int group_created_by = atoi(row[0]); // Người tạo nhóm
-    mysql_free_result(res);
-
-    // Kiểm tra quyền xóa: user_id phải là dir_created_by hoặc group_created_by
-    if (user_id != group_created_by) {
+    if (strcmp(row[0], "admin") != 0)
+    {
         send_status(client_sock, 4030); // Không có quyền xóa thư mục
+        mysql_free_result(res);
         return -1;
     }
+    mysql_free_result(res);
 
     // Xóa thư mục khỏi bảng directories
     snprintf(query, sizeof(query), "DELETE FROM directories WHERE dir_id = %d", dir_id);
 
-    if (mysql_query(conn, query) == 0) {
+    if (mysql_query(conn, query) == 0)
+    {
         send_status(client_sock, 2000); // Xóa thư mục thành công
         return 0;
     }
@@ -580,9 +611,8 @@ int move_file(int client_sock, const char *user_id, const char *item_id, const c
     return -1;
 }
 
-
-
-int calcDecodeLength(const char *b64input, size_t len) {
+int calcDecodeLength(const char *b64input, size_t len)
+{
     int padding = 0;
 
     if (len >= 2 && b64input[len - 1] == '=' && b64input[len - 2] == '=')
@@ -593,12 +623,14 @@ int calcDecodeLength(const char *b64input, size_t len) {
     return (int)(len * 0.75) - padding;
 }
 
-unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *output_length) {
+unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *output_length)
+{
     BIO *bio, *b64;
 
     int decodeLen = calcDecodeLength(data, input_length);
     unsigned char *buffer = (unsigned char *)malloc(decodeLen + 1);
-    if (!buffer) {
+    if (!buffer)
+    {
         perror("Failed to allocate memory");
         return NULL;
     }
@@ -610,7 +642,8 @@ unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *o
     bio = BIO_push(b64, bio);
 
     *output_length = BIO_read(bio, buffer, input_length);
-    if (*output_length <= 0) {
+    if (*output_length <= 0)
+    {
         perror("BIO_read failed");
         free(buffer);
         buffer = NULL;
@@ -620,15 +653,18 @@ unsigned char *base64_decode_v2(const char *data, size_t input_length, size_t *o
     return buffer;
 }
 
-size_t get_file_size(const char *file_path) {
+size_t get_file_size(const char *file_path)
+{
     struct stat st;
-    if (stat(file_path, &st) == 0) {
+    if (stat(file_path, &st) == 0)
+    {
         return st.st_size;
     }
     return 0;
 }
 
-void handle_receive_file_chunk(int client_sock, const char *token, int group_id, const char *data) {
+void handle_receive_file_chunk(int client_sock, const char *token, int group_id, int dir_id, const char *data)
+{
     char file_name[BUFFER_SIZE];
     char file_extension[BUFFER_SIZE];
     int chunk_index, total_chunks;
@@ -637,7 +673,8 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
     int user_id = get_user_id_by_token(token);
 
     // Parse data
-    if (sscanf(data, "%1023[^|]||%1023[^|]||%d||%d||%4100s", file_name, file_extension, &chunk_index, &total_chunks, chunk_data) != 5) {
+    if (sscanf(data, "%1023[^|]||%1023[^|]||%d||%d||%4100s", file_name, file_extension, &chunk_index, &total_chunks, chunk_data) != 5)
+    {
         perror("Failed to parse chunk data");
         send(client_sock, "5000 Failed to parse chunk data", strlen("5000 Failed to parse chunk data"), 0);
         return;
@@ -646,7 +683,8 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
     // Decode base64
     size_t decoded_length;
     unsigned char *decoded_data = base64_decode_v2(chunk_data, strlen(chunk_data), &decoded_length);
-    if (!decoded_data) {
+    if (!decoded_data)
+    {
         perror("Failed to decode base64 data");
         send(client_sock, "5000 Failed to decode base64 data", strlen("5000 Failed to decode base64 data"), 0);
         return;
@@ -655,20 +693,65 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
     // Create directory if not exists
     char group_folder[FILE_PATH_SIZE];
     snprintf(group_folder, sizeof(group_folder), "uploads/group_%d", group_id);
-    if (mkdir(group_folder, 0777) && errno != EEXIST) {
+    if (mkdir(group_folder, 0777) && errno != EEXIST)
+    {
         perror("Failed to create group directory");
         free(decoded_data);
         send(client_sock, "5000 Failed to create group directory", strlen("5000 Failed to create group directory"), 0);
         return;
     }
 
+    // Create sub-directory for dir_id if not exists
+    char dir_folder[FILE_PATH_SIZE];
+    snprintf(dir_folder, sizeof(dir_folder), "%s/dir_%d", group_folder, dir_id);
+    if (mkdir(dir_folder, 0777) && errno != EEXIST)
+    {
+        perror("Failed to create directory");
+        free(decoded_data);
+        send(client_sock, "5000 Failed to create directory", strlen("5000 Failed to create directory"), 0);
+        return;
+    }
+
     // File path
     char file_path[FILE_PATH_SIZE];
-    snprintf(file_path, sizeof(file_path), "%s/%s", group_folder, file_name);
+    snprintf(file_path, sizeof(file_path), "%s/%s", dir_folder, file_name);
+
+    // If it's the first chunk, remove the existing file if it exists
+    if (chunk_index == 0)
+    {
+        // Check if the file already exists in the database
+        char query[BUFFER_SIZE];
+        snprintf(query, sizeof(query), "SELECT file_id, file_path FROM files WHERE file_name = '%s' AND dir_id = %d", file_name, dir_id);
+        if (mysql_query(conn, query))
+        {
+            perror("Failed to query existing file");
+            free(decoded_data);
+            send(client_sock, "5000 Failed to query existing file", strlen("5000 Failed to query existing file"), 0);
+            return;
+        }
+
+        MYSQL_RES *res = mysql_store_result(conn);
+        if (res)
+        {
+            MYSQL_ROW row = mysql_fetch_row(res);
+            if (row)
+            {
+                // File exists, remove it from the filesystem and database
+                remove(row[1]);
+                snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %s", row[0]);
+                mysql_query(conn, query);
+            }
+            mysql_free_result(res);
+        }
+
+        // Remove the existing file if it exists in the filesystem
+        remove(file_path);
+    }
 
     // Open file in append mode
     FILE *file = fopen(file_path, "ab");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         perror("Failed to open file");
         free(decoded_data);
         send(client_sock, "5000 Failed to write file", strlen("5000 Failed to write file"), 0);
@@ -679,16 +762,19 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
     fclose(file);
     free(decoded_data);
 
-    if (chunk_index == total_chunks - 1) {
+    if (chunk_index == total_chunks - 1)
+    {
         // File is fully received, save to database
         size_t file_size = get_file_size(file_path);
         char query[BUFFER_SIZE];
         snprintf(query, sizeof(query),
-                 "INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id) "
-                 "VALUES ('%s', '%s', %zu, (SELECT user_id FROM users WHERE user_id = '%d'), %d)",
-                 file_name, file_path, file_size, user_id, group_id);
+                 "INSERT INTO files (file_name, file_path, file_size, uploaded_by, group_id, dir_id) "
+                 "VALUES ('%s', '%s', %zu, (SELECT user_id FROM users WHERE user_id = '%d'), %d, %d) "
+                 "ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), file_size = VALUES(file_size), uploaded_by = VALUES(uploaded_by), upload_date = CURRENT_TIMESTAMP",
+                 file_name, file_path, file_size, user_id, group_id, dir_id);
 
-        if (mysql_query(conn, query)) {
+        if (mysql_query(conn, query))
+        {
             fprintf(stderr, "Failed to save file info to database. Error: %s\n", mysql_error(conn));
             send(client_sock, "5000 Failed to save file info", strlen("5000 Failed to save file info"), 0);
             return;
@@ -696,8 +782,43 @@ void handle_receive_file_chunk(int client_sock, const char *token, int group_id,
 
         printf("File received and saved to database successfully: %s\n", file_path);
         send(client_sock, "2000 File uploaded successfully", strlen("2000 File uploaded successfully"), 0);
-    } else {
-        printf("Chunk %d of %d uploaded successfully\n", chunk_index, total_chunks);
-        send(client_sock, "2000 Chunk uploaded successfully", strlen("2000 Chunk uploaded successfully"), 0);
     }
+    else
+    {
+        printf("Chunk %d of %d uploaded successfully\n", chunk_index, total_chunks);
+        send(client_sock, "2001 Chunk uploaded successfully", strlen("2001 Chunk uploaded successfully"), 0);
+    }
+}
+
+void handle_create_folder(int client_sock, const char *token, int group_id, int parent_dir_id, const char *folder_name)
+{
+    char query[BUFFER_SIZE];
+    int user_id = get_user_id_by_token(token);
+
+    // Check if the folder already exists
+    snprintf(query, sizeof(query), "SELECT dir_id FROM directories WHERE dir_name = '%s' AND parent_id = %d AND group_id = %d", folder_name, parent_dir_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res && mysql_num_rows(res) > 0)
+    {
+        send_status(client_sock, 4001); // Folder already exists
+        mysql_free_result(res);
+        return;
+    }
+    mysql_free_result(res);
+
+    // Insert the new folder into the database
+    snprintf(query, sizeof(query), "INSERT INTO directories (dir_name, parent_id, group_id, created_by) VALUES ('%s', %d, %d, %d)", folder_name, parent_dir_id, group_id, user_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL insert error
+        return;
+    }
+
+    send_status(client_sock, 2000); // Success
 }

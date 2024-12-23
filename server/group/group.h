@@ -15,4 +15,5 @@ int handle_list_invitations(int client_sock, const char *token);
 int handle_respond_invitation(int client_sock, const char* token, int requestId, const char* approval_status);
 int handle_approve_join_request(int client_sock, const char* token, int request_id, const char* approval_status);
 int handle_list_available_invite_user(int client_sock, const char *token, int group_id);
+int handle_list_admin_groups(int client_sock, const char *token);
 #endif // GROUP_H

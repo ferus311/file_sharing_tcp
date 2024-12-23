@@ -20,36 +20,36 @@ const Homepage = () => {
     const navigate = useNavigate();
 
     // Fetching groups data
-    useEffect(() => {
-        const fetchGroups = async () => {
-            try {
-                const response = token
-                    ? await window.electronAPI.listGroups(token) // Gửi token nếu có
-                    : await window.electronAPI.listGroups("");
+    const fetchGroups = async () => {
+        try {
+            const response = token
+                ? await window.electronAPI.listGroups(token) // Gửi token nếu có
+                : await window.electronAPI.listGroups("");
 
-                if (response.startsWith('2000')) {
-                    const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
-                    console.log(data);
-                    if (data.trim() === "") {
-                        setGroups([]);
-                        // message.info('Bạn chưa vào group nào.');
-                    } else {
-                        const groupArray = data
-                            .split('||') // Tách các nhóm bằng "||"
-                            .map((item) => {
-                                const [id, name, root_dir_id] = item.split('&'); // Tách ID và tên nhóm bằng "&"
-                                return { id: parseInt(id, 10), name , root_dir_id};
-                            });
-                        setGroups(groupArray);
-                    }
+            if (response.startsWith('2000')) {
+                const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
+                console.log(data);
+                if (data.trim() === "") {
+                    setGroups([]);
+                    // message.info('Bạn chưa vào group nào.');
                 } else {
-                    console.error('Failed to fetch groups:', response);
+                    const groupArray = data
+                        .split('||') // Tách các nhóm bằng "||"
+                        .map((item) => {
+                            const [id, name, root_dir_id] = item.split('&'); // Tách ID và tên nhóm bằng "&"
+                            return { id: parseInt(id, 10), name , root_dir_id};
+                        });
+                    setGroups(groupArray);
                 }
-            } catch (error) {
-                console.error('Error fetching groups:', error);
+            } else {
+                console.error('Failed to fetch groups:', response);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching groups:', error);
+        }
+    };
 
+    useEffect(() => {
         fetchGroups();
     }, [token]);
 
@@ -70,9 +70,8 @@ const Homepage = () => {
             const response = await window.electronAPI.createGroup(token, values.groupName);
             if (response.startsWith('2000')) {
                 message.success('Group created successfully!');
-                const newGroup = { id: response.split(' ')[1], name: values.groupName };
-                setGroups([...groups, newGroup]);
                 setIsModalVisible(false);
+                fetchGroups(); // Reload groups after creating a new group
             } else {
                 message.error('Failed to create group.');
             }

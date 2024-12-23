@@ -228,34 +228,34 @@ int handle_list_requests(int client_sock, const char *token, int group_id) {
         return 4030;
     }
 
-    // Step 1: Check if the user is the creator of the group
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+    // Step 1: Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE group_id = %d AND user_id = %d", group_id, user_id);
 
     if (mysql_query(conn, query)) {
-        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
-        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        fprintf(stderr, "SELECT role failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch user role"
         return 5000;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL) {
         fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
-        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        send_message(client_sock, 5000, NULL); // "Failed to fetch user role"
         return 5000;
     }
 
     if (mysql_num_rows(res) == 0) {
-        send_message(client_sock, 4040, NULL); // "Group not found"
+        send_message(client_sock, 4040, NULL); // "Group not found or user not in group"
         mysql_free_result(res);
         return 4040;
     }
 
     MYSQL_ROW row = mysql_fetch_row(res);
-    int created_by = atoi(row[0]); // Lấy user_id của admin nhóm
+    const char *role = row[0];
     mysql_free_result(res);
 
-    if (created_by != user_id) {
-        send_message(client_sock, 4030, NULL); // "Permission denied: You are not the creator of this group"
+    if (strcmp(role, "admin") != 0) {
+        send_message(client_sock, 4030, NULL); // "Permission denied: You are not an admin of this group"
         return 4030;
     }
 
@@ -478,29 +478,30 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
     }
     mysql_free_result(res);
 
-    // Step 3: Check if delete user token have authority
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+    // Step 3: Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE group_id = %d AND user_id = %d", group_id, get_user_id_by_token(token));
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        fprintf(stderr, "SELECT role failed. Error: %s\n", mysql_error(conn));
         return -1;
     }
     res = mysql_store_result(conn);
 
-    int int_user_id = get_user_id_by_token(token);
-
-    // Get create by user_id
-    row = mysql_fetch_row(res);
-    char *str_user_id = row[0];
-    int int_created_by = atoi(str_user_id);
-
-    // Compare if send command user is the creator group
-    if (int_created_by != int_user_id)
+    if (res == NULL || mysql_num_rows(res) == 0)
     {
         send(client_sock, "4031\r\n", 6, 0); // No authority
         return 4031;
     }
+
+    row = mysql_fetch_row(res);
+    const char *role = row[0];
     mysql_free_result(res);
+
+    if (strcmp(role, "admin") != 0)
+    {
+        send(client_sock, "4031\r\n", 6, 0); // No authority
+        return 4031;
+    }
 
     // Step 4: Delete from user_groups
     snprintf(query, sizeof(query), "DELETE FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
@@ -516,94 +517,75 @@ int handle_remove_member(int client_sock, const char *token, int group_id, int u
 }
 
 // Liệt kê danh sách nhóm người dùng
-int handle_list_group(int client_sock, const char *token)
-{
+int handle_list_group(int client_sock, const char *token) {
     char query[512];
     char combined_groups[4096] = "";
 
-    if (token == NULL || strlen(token) == 0)
-    {
-        // Nếu không có token, lấy tất cả các nhóm
-        snprintf(query, sizeof(query), "SELECT group_id, group_name, root_dir_id FROM `groups`");
-    }
-    else
-    {
-        // Nếu có token, lấy các nhóm người dùng đã tham gia
+    // Optimize query to get all needed information in one go
+    if (token == NULL || strlen(token) == 0) {
+        // For non-authenticated users, get all public groups
+        snprintf(query, sizeof(query),
+            "SELECT g.group_id, g.group_name, g.root_dir_id "
+            "FROM `groups` g");
+    } else {
+        // For authenticated users, get only groups they're members of
         int user_id = get_user_id_by_token(token);
+        if (user_id < 0) {
+            send_message(client_sock, 4011, "Invalid token"); // Token expired/invalid
+            return 4011;
+        }
 
-        // Lấy group_id mà người dùng đã tham gia
-        snprintf(query, sizeof(query), "SELECT group_id FROM user_groups WHERE user_id = %d", user_id);
+        snprintf(query, sizeof(query),
+            "SELECT g.group_id, g.group_name, g.root_dir_id "
+            "FROM `groups` g "
+            "INNER JOIN user_groups ug ON g.group_id = ug.group_id "
+            "WHERE ug.user_id = %d", user_id);
     }
 
-    if (mysql_query(conn, query))
-    {
-        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Query failed: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, "Database error");
         return -1;
     }
 
-    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result) {
+        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, "Database error");
+        return -1;
+    }
 
-    MYSQL_ROW row;
-
-    if (mysql_num_rows(res) == 0)
-    {
-        // Không có nhóm
-        send_message(client_sock, 2000, NULL);
-        mysql_free_result(res);
+    if (mysql_num_rows(result) == 0) {
+        mysql_free_result(result);
+        send_message(client_sock, 2000, ""); // Empty result
         return 2000;
     }
 
-    // Nếu không có token, sẽ có cả group_id, group_name và root_dir_id trong kết quả
-    while ((row = mysql_fetch_row(res)) != NULL)
-    {
-        int group_id;
-        const char *group_name;
-        int root_dir_id;
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        if (!row[0] || !row[1] || !row[2]) continue; // Skip if any field is NULL
 
-        // Nếu có token, chỉ trả về các nhóm mà người dùng tham gia
-        if (token != NULL && strlen(token) > 0)
-        {
-            group_id = atoi(row[0]);
-            snprintf(query, sizeof(query), "SELECT group_name, root_dir_id FROM `groups` WHERE group_id = %d", group_id);
-
-            if (mysql_query(conn, query))
-            {
-                fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
-                return -1;
-            }
-
-            MYSQL_RES *res_group = mysql_store_result(conn);
-            MYSQL_ROW row_group = mysql_fetch_row(res_group);
-            group_name = row_group[0];
-            root_dir_id = atoi(row_group[1]);
-
-            mysql_free_result(res_group);
-        }
-        else
-        {
-            // Nếu không có token, lấy cả tên nhóm và root_dir_id từ bảng `groups`
-            group_id = atoi(row[0]);
-            group_name = row[1];
-            root_dir_id = atoi(row[2]);
-        }
-
-        // Tạo chuỗi theo định dạng group_name&group_id&root_dir_id
+        // Format: group_id&group_name&root_dir_id
         char group_entry[256];
-        snprintf(group_entry, sizeof(group_entry), "%d&%s&%d", group_id, group_name, root_dir_id);
+        snprintf(group_entry, sizeof(group_entry), "%s&%s&%s",
+                row[0], row[1], row[2]);
 
-        // Nối vào combined_groups với separator ||
-        if (strlen(combined_groups) > 0)
-        {
+        // Add separator if not first entry
+        if (strlen(combined_groups) > 0) {
             strncat(combined_groups, "||", sizeof(combined_groups) - strlen(combined_groups) - 1);
         }
-        strncat(combined_groups, group_entry, sizeof(combined_groups) - strlen(combined_groups) - 1);
+
+        // Add group entry
+        if (strlen(combined_groups) + strlen(group_entry) < sizeof(combined_groups) - 1) {
+            strcat(combined_groups, group_entry);
+        } else {
+            fprintf(stderr, "Buffer would overflow, truncating results\n");
+            break;
+        }
     }
 
-    mysql_free_result(res);
-
-    // Gửi phản hồi đến client
+    mysql_free_result(result);
     send_message(client_sock, 2000, combined_groups);
-
     return 2000;
 }
 
@@ -996,32 +978,32 @@ int handle_approve_join_request(int client_sock, const char *token, int request_
     const char *request_status = row[2];
     mysql_free_result(res);
 
-    // Step 4: Ensure the user_id is the creator of the group
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+    // Step 4: Ensure the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE group_id = %d AND user_id = %d", group_id, user_id);
 
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
-        send_message(client_sock, 5000, NULL);//"Failed to fetch group creator"
+        fprintf(stderr, "SELECT role failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL);//"Failed to fetch user role"
         return 5000;
     }
 
     res = mysql_store_result(conn);
     if (res == NULL || mysql_num_rows(res) == 0)
     {
-        send_message(client_sock, 4040, NULL);//"Group not found"
+        send_message(client_sock, 4040, NULL);//"Group not found or user not in group"
         if (res)
             mysql_free_result(res);
         return 4040;
     }
 
     row = mysql_fetch_row(res);
-    int created_by = atoi(row[0]);
+    const char *role = row[0];
     mysql_free_result(res);
 
-    if (created_by != user_id)
+    if (strcmp(role, "admin") != 0)
     {
-        send_message(client_sock, 4030, NULL);//"Permission denied: You are not the creator of this group"
+        send_message(client_sock, 4030, NULL);//"Permission denied: You are not an admin of this group"
         return 4030;
     }
 
@@ -1071,34 +1053,34 @@ int handle_list_available_invite_user(int client_sock, const char *token, int gr
         return 4030;
     }
 
-    // Step 1: Check if the user is the creator of the group
-    snprintf(query, sizeof(query), "SELECT created_by FROM `groups` WHERE group_id = %d", group_id);
+    // Step 1: Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE group_id = %d AND user_id = %d", group_id, user_id);
 
     if (mysql_query(conn, query)) {
-        fprintf(stderr, "SELECT created_by failed. Error: %s\n", mysql_error(conn));
-        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        fprintf(stderr, "SELECT role failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, NULL); // "Failed to fetch user role"
         return 5000;
     }
 
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL) {
         fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
-        send_message(client_sock, 5000, NULL); // "Failed to fetch group creator"
+        send_message(client_sock, 5000, NULL); // "Failed to fetch user role"
         return 5000;
     }
 
     if (mysql_num_rows(res) == 0) {
-        send_message(client_sock, 4040, NULL); // "Group not found"
+        send_message(client_sock, 4040, NULL); // "Group not found or user not in group"
         mysql_free_result(res);
         return 4040;
     }
 
     MYSQL_ROW row = mysql_fetch_row(res);
-    int created_by = atoi(row[0]); // Get the creator's user ID
+    const char *role = row[0];
     mysql_free_result(res);
 
-    if (created_by != user_id) {
-        send_message(client_sock, 4030, NULL); // "Permission denied: You are not the creator of this group"
+    if (strcmp(role, "admin") != 0) {
+        send_message(client_sock, 4030, NULL); // "Permission denied: You are not an admin of this group"
         return 4030;
     }
 
@@ -1161,4 +1143,72 @@ int handle_list_available_invite_user(int client_sock, const char *token, int gr
     // Step 5: Send the response back to the client
     send_message(client_sock, 2000, response);
     return 2000;
+}
+
+int handle_list_admin_groups(int client_sock, const char *token)
+{
+    if (token == NULL || strlen(token) == 0)
+    {
+        send_message(client_sock, 4000, "Invalid token");
+        return -1;
+    }
+
+    // Step 1: Retrieve user_id from the token
+    int user_id = get_user_id_by_token(token);
+    if (user_id <= 0)
+    {
+        send_message(client_sock, 4001, "Invalid user");
+        return -1;
+    }
+
+    char query[1024];
+    char response[4096] = "";
+
+    // Query for groups where the user is an admin
+    snprintf(query, sizeof(query),
+             "SELECT g.group_id, g.group_name "
+             "FROM `groups` g "
+             "JOIN user_groups ug ON g.group_id = ug.group_id "
+             "WHERE ug.user_id = %d AND ug.role = 'admin'",
+             user_id);
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "SELECT failed. Error: %s\n", mysql_error(conn));
+        send_message(client_sock, 5000, "Database query failed");
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL)
+    {
+        send_message(client_sock, 5001, "No groups found");
+        return -1;
+    }
+
+    MYSQL_ROW row;
+
+    // Add groups where the user is an admin
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        int group_id = atoi(row[0]);
+        const char *group_name = row[1];
+
+        // Append group details
+        char entry[256];
+        snprintf(entry, sizeof(entry), "%d&%s", group_id, group_name);
+
+        if (strlen(response) > 0)
+        {
+            strncat(response, "||", sizeof(response) - strlen(response) - 1);
+        }
+        strncat(response, entry, sizeof(response) - strlen(response) - 1);
+    }
+
+    mysql_free_result(res);
+
+    // Send the response
+    send_message(client_sock, 2000, response);
+
+    return 2000; // Success
 }
