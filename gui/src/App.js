@@ -11,7 +11,6 @@ import Invite from './pages/Invite';
 import JoinGroup from './pages/JoinGroup';
 import Layout from './components/Layout';
 import GroupDetail from './pages/GroupDetail';
-import FolderDetail from './pages/FolderDetail';
 import FileDetail from './pages/FileDetail';
 import './style.css';
 
@@ -33,7 +32,6 @@ function App() {
                             </Layout>
                         }
                     />
-                    <Route path="/group/:groupId/folder/:folderId" element={<Layout><FolderDetail /></Layout>} />
                     <Route path="/group/:groupId/file/:fileId" element={<Layout><FileDetail /></Layout>} />
                     <Route
                         path="/"

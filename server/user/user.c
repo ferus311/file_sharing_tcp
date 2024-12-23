@@ -58,6 +58,7 @@ int handle_registration(int client_sock, const char *username, const char *passw
     MYSQL_RES *res = mysql_store_result(conn);
     if (mysql_num_rows(res) > 0) {
         send(client_sock, "4090\r\n", 6, 0);  // Username already exists
+        mysql_free_result(res);
         return 4090;
     }
 
@@ -65,18 +66,22 @@ int handle_registration(int client_sock, const char *username, const char *passw
 
     if (mysql_query(conn, query)) {
         fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
+        mysql_free_result(res);
         return -1;
     }
 
     // Retrieve the user_id of the newly created user
     snprintf(query, sizeof(query), "SELECT user_id FROM users WHERE username = '%s'", username);
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "SELECT user_id failed. Error: %s\n", mysql_error(conn));
+        mysql_free_result(res);
+        return -1;
+    }
     res = mysql_store_result(conn);
     MYSQL_ROW row = mysql_fetch_row(res);
     char token[512];
     create_token(row[0], token);
     mysql_free_result(res);
-    // Generate token
-
 
     // Send token to client
     char response[1024];

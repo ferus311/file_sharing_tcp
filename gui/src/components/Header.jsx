@@ -9,12 +9,17 @@ const Header = () => {
     const navigate = useNavigate();
     const [isModalVisible, setIsModalVisible] = useState(false);
 
+    const handleLogout = () => {
+        logout();
+        navigate("/");
+    };
+
     const menu = (
         <Menu>
             <Menu.Item key="profile" onClick={() => navigate("/profile")}>
                 Profile
             </Menu.Item>
-            <Menu.Item key="logout" onClick={logout}>
+            <Menu.Item key="logout" onClick={handleLogout}>
                 Log Out
             </Menu.Item>
         </Menu>
@@ -85,7 +90,7 @@ const Header = () => {
                                     </button>
                                     <SearchGroups
                                         visible={isModalVisible}
-                                        onClose={() => setIsModalVisible(false)} 
+                                        onClose={() => setIsModalVisible(false)}
                                     />
                                     <div className="header__hamburger d-xl-block my-auto">
                                         <div className="sidebar__toggle">

@@ -4,9 +4,9 @@
 #include "db.h"
 
 #define MYSQL_HOST "localhost"
-#define MYSQL_USER "dmn"
-#define MYSQL_PASS "0403"
-#define MYSQL_DB "file_sharing"
+#define MYSQL_USER "fong"
+#define MYSQL_PASS "123"
+#define MYSQL_DB "file_sharing_v2"
 
 // Initialize MySQL connection
 void init_mysql() {

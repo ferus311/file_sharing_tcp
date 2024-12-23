@@ -235,3 +235,9 @@ ipcMain.handle('download-file', async (event, token, fileId) => {
         }
     });
 });
+
+ipcMain.handle('logout', async () => {
+    // Handle logout logic here, e.g., clear session, redirect to login page, etc.
+    console.log('Session expired. Logging out...');
+    mainWindow.webContents.send('logout');
+});

@@ -3,27 +3,28 @@ import { Layout, Card, List, Avatar, message, Button, Popconfirm, Modal, Input, 
 import { FolderOutlined, FileOutlined,   DeleteOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
+const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
     const navigate = useNavigate();
     const [isAdmin, setIsAdmin] = useState(isAdminProps);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const [itemsDir, setItemsDir] = useState([]);
+    const [dirId, setDirId] = useState(rootDirId);
 
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
 
     useEffect(() => {
         fetchListGroupContent();
-    }, [groupId]);
+    }, [groupId, dirId]);
 
     const fetchListGroupContent = async () => {
         console.log("----------Start fetchListGroupContent-----------")
         setLoading(true);
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
-            const response = await window.electronAPI.listGroupContent(cleanToken, groupId);
+            const response = await window.electronAPI.listDirectory(cleanToken, groupId, dirId);
             console.log("fetchListGroupContent>>> " + response);
             if(!isAdminProps) setReFetch(true);
 
@@ -72,12 +73,9 @@ const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
         }
     };
 
-
     const handleItemClick = (item) => {
         if (item.type === 'D') {
-            navigate(`/group/${groupId}/folder/${item.id}`);
-        } else {
-            navigate(`/group/${groupId}/file/${item.id}`);
+            setDirId(item.id);
         }
     };
 
@@ -158,8 +156,8 @@ const Documents = ({ groupId, token, isAdminProps, setReFetch }) => {
 
     return (
         <>
-            <div>  
-                {isAdmin === 1 ? "ADMIN" : "MEMBER"} 
+            <div>
+                {isAdmin === 1 ? "ADMIN" : "MEMBER"}
             </div>
             <Layout>
                 <div style={{ marginBottom: '16px', display: 'flex', }}>

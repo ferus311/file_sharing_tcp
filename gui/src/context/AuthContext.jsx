@@ -22,6 +22,19 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('username');
     };
 
+    useEffect(() => {
+        const handleLogout = () => {
+            logout();
+            window.location.href = '/login'; // Redirect to login page
+        };
+
+        window.electronAPI.on('logout', handleLogout);
+
+        return () => {
+            window.electronAPI.off('logout', handleLogout);
+        };
+    }, []);
+
     return (
         <AuthContext.Provider value={{ token, username, login, logout, allGroup, setAllGroup }}>
             {children}

@@ -99,7 +99,26 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
         return -1;
     }
 
-    // Step 3: Send the response back to the client
+    // Step 3: Create the root directory for the new group
+    snprintf(query, sizeof(query), "INSERT INTO directories (dir_name, group_id, created_by) VALUES ('root', %d, %d)", group_id, user_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to create root directory: %s\n", mysql_error(conn));
+        return -1;
+    }
+
+    // Lấy ID của thư mục root mới tạo
+    int root_dir_id = mysql_insert_id(conn);
+
+    // Step 4: Update the group with the root directory ID
+    snprintf(query, sizeof(query), "UPDATE `groups` SET root_dir_id = %d WHERE group_id = %d", root_dir_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to update group with root directory ID: %s\n", mysql_error(conn));
+        return -1;
+    }
+
+    // Step 5: Send the response back to the client
     char response[1024];
     snprintf(response, sizeof(response), "2000 %d\r\n", group_id);
     send(client_sock, response, strlen(response), 0);
@@ -309,7 +328,7 @@ int handle_invite_user_to_group(int client_sock, int group_id, int invitee_id)
         fprintf(stderr, "SELECT group_id failed. Error: %s\n", mysql_error(conn));
         send_message(client_sock, 5000, NULL); // Failed to fetch group
         return 5000;
-    }   
+    }
 
     MYSQL_RES *res = mysql_store_result(conn);
     if (res == NULL || mysql_num_rows(res) == 0)
@@ -505,7 +524,7 @@ int handle_list_group(int client_sock, const char *token)
     if (token == NULL || strlen(token) == 0)
     {
         // Nếu không có token, lấy tất cả các nhóm
-        snprintf(query, sizeof(query), "SELECT group_id, group_name FROM `groups`");
+        snprintf(query, sizeof(query), "SELECT group_id, group_name, root_dir_id FROM `groups`");
     }
     else
     {
@@ -534,17 +553,18 @@ int handle_list_group(int client_sock, const char *token)
         return 2000;
     }
 
-    // Nếu không có token, sẽ có cả group_id và group_name trong kết quả
+    // Nếu không có token, sẽ có cả group_id, group_name và root_dir_id trong kết quả
     while ((row = mysql_fetch_row(res)) != NULL)
     {
         int group_id;
         const char *group_name;
+        int root_dir_id;
 
         // Nếu có token, chỉ trả về các nhóm mà người dùng tham gia
         if (token != NULL && strlen(token) > 0)
         {
             group_id = atoi(row[0]);
-            snprintf(query, sizeof(query), "SELECT group_name FROM `groups` WHERE group_id = %d", group_id);
+            snprintf(query, sizeof(query), "SELECT group_name, root_dir_id FROM `groups` WHERE group_id = %d", group_id);
 
             if (mysql_query(conn, query))
             {
@@ -555,19 +575,21 @@ int handle_list_group(int client_sock, const char *token)
             MYSQL_RES *res_group = mysql_store_result(conn);
             MYSQL_ROW row_group = mysql_fetch_row(res_group);
             group_name = row_group[0];
+            root_dir_id = atoi(row_group[1]);
 
             mysql_free_result(res_group);
         }
         else
         {
-            // Nếu không có token, lấy cả tên nhóm từ bảng `groups`
+            // Nếu không có token, lấy cả tên nhóm và root_dir_id từ bảng `groups`
             group_id = atoi(row[0]);
             group_name = row[1];
+            root_dir_id = atoi(row[2]);
         }
 
-        // Tạo chuỗi theo định dạng group_name&group_id
+        // Tạo chuỗi theo định dạng group_name&group_id&root_dir_id
         char group_entry[256];
-        snprintf(group_entry, sizeof(group_entry), "%d&%s", group_id, group_name);
+        snprintf(group_entry, sizeof(group_entry), "%d&%s&%d", group_id, group_name, root_dir_id);
 
         // Nối vào combined_groups với separator ||
         if (strlen(combined_groups) > 0)
@@ -904,20 +926,21 @@ int handle_respond_invitation(int client_sock, const char *token, int requestId,
     snprintf(query, sizeof(query),
              "UPDATE group_requests SET status = '%s' WHERE request_id = %d",
              approval_status, requestId);
-
-    if (mysql_query(conn, query)) {
+    if (mysql_query(conn, query))
+    {
         fprintf(stderr, "UPDATE failed. Error: %s\n", mysql_error(conn));
         send_message(client_sock, 5000, "Failed to update invitation status");
         return 5000;
     }
 
     // Step 5: If accepted, add the user to the group
-    if (strcmp(approval_status, "accepted") == 0) {
+    if (strcmp(approval_status, "accepted") == 0)
+    {
         snprintf(query, sizeof(query),
                  "INSERT INTO user_groups (user_id, group_id) VALUES (%d, %d)",
                  user_id, group_id);
-
-        if (mysql_query(conn, query)) {
+        if (mysql_query(conn, query))
+        {
             fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));
             send_message(client_sock, 5000, "Failed to add user to the group");
             return 5000;
@@ -1011,7 +1034,6 @@ int handle_approve_join_request(int client_sock, const char *token, int request_
 
     // Step 6: Update the request status
     snprintf(query, sizeof(query), "UPDATE group_requests SET status = '%s' WHERE request_id = %d", approval_status, request_id);
-
     if (mysql_query(conn, query))
     {
         fprintf(stderr, "UPDATE failed. Error: %s\n", mysql_error(conn));
@@ -1025,7 +1047,6 @@ int handle_approve_join_request(int client_sock, const char *token, int request_
         snprintf(query, sizeof(query),
                  "INSERT INTO user_groups (user_id, group_id) "
                  "SELECT user_id, group_id FROM group_requests WHERE request_id = %d", request_id);
-
         if (mysql_query(conn, query))
         {
             fprintf(stderr, "INSERT failed. Error: %s\n", mysql_error(conn));

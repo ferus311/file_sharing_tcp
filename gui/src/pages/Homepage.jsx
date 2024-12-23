@@ -30,13 +30,18 @@ const Homepage = () => {
                 if (response.startsWith('2000')) {
                     const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
                     console.log(data);
-                    const groupArray = data
-                        .split('||') // Tách các nhóm bằng "||"
-                        .map((item) => {
-                            const [id, name] = item.split('&'); // Tách ID và tên nhóm bằng "&"
-                            return { id: parseInt(id, 10), name };
-                        });
-                    setGroups(groupArray);
+                    if (data.trim() === "") {
+                        setGroups([]);
+                        // message.info('Bạn chưa vào group nào.');
+                    } else {
+                        const groupArray = data
+                            .split('||') // Tách các nhóm bằng "||"
+                            .map((item) => {
+                                const [id, name, root_dir_id] = item.split('&'); // Tách ID và tên nhóm bằng "&"
+                                return { id: parseInt(id, 10), name , root_dir_id};
+                            });
+                        setGroups(groupArray);
+                    }
                 } else {
                     console.error('Failed to fetch groups:', response);
                 }
@@ -97,13 +102,19 @@ const Homepage = () => {
             <section className="news-section fix section-padding">
                 <div className="container">
                     <div className="row g-4">
-                        {groups.map((group, index) => (
-                            <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.1 + index * 0.1}s`} key={index}>
-                                <Link to={`/group/${group.id}`} state={{ groupId: group.id, groupName: group.name }}>
-                                    <Group groupId={group.id} groupName={group.name} />
-                                </Link>
+                        {groups.length === 0 ? (
+                            <div className="col-12 text-center">
+                                <p>Bạn chưa tham gia group nào.</p>
                             </div>
-                        ))}
+                        ) : (
+                            groups.map((group, index) => (
+                                <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={`${0.1 + index * 0.1}s`} key={index}>
+                                    <Link to={`/group/${group.id}`} state={{ groupId: group.id, groupName: group.name, rootDirId: group.root_dir_id }}>
+                                        <Group groupId={group.id} groupName={group.name} />
+                                    </Link>
+                                </div>
+                            ))
+                        )}
                     </div>
                     <div className="page-nav-wrap pt-5 text-center wow fadeInUp" data-wow-delay=".3s">
                         <ul>

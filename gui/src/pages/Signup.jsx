@@ -25,16 +25,18 @@ const Signup = () => {
         try {
             const response = await window.electronAPI.signup(username, password, email);
             if (response.startsWith('2000')) {
-                const tokenValue = response.split(' ')[1];
+                const tokenValue = response.split(' ')[1].replace(/\n/g, '').replace(/\r/g, '');
                 login(tokenValue, username);
                 navigate('/');
-                
+
                 setSuccessMessage('Signup successful! Redirecting to login...');
                 setTimeout(() => {
                     setSuccessMessage('');
                     navigate('/');
                 }, 3000); // Chờ 3 giây trước khi chuyển hướng và xóa thông báo
             } else {
+                // console.log('Signup failed:', response);
+
                 setErrorMessage('Signup failed. Please try again.');
                 setTimeout(() => {
                     setErrorMessage('');

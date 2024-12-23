@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Breadcrumb, message} from 'antd';
-import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined } from '@ant-design/icons';
+import { Layout, Menu, Breadcrumb, message } from 'antd';
+import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined, HomeOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './GroupDetail.css';
 import { useAuth } from '../context/AuthContext';
@@ -17,16 +17,32 @@ message.config({
 
 const LeaveGroup = () => <div>Leave Group Component</div>;
 
+// Add Banner component
+const Banner = ({ groupName }) => (
+    <div style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        background: '#f0f2f5',
+        borderRadius: '8px',
+        margin: '20px 0'
+    }}>
+        <h1 style={{ fontSize: '2.5em', marginBottom: '20px' }}>Welcome to {groupName}</h1>
+        <p style={{ fontSize: '1.2em', color: '#666' }}>
+            Collaborate with your team members and manage your documents efficiently.
+        </p>
+    </div>
+);
 
 const GroupDetail = () => {
     const { token } = useAuth();
     const location = useLocation();
-    const { groupId, groupName } = location.state || {};
-    const [currentView, setCurrentView] = useState('documents'); // Trạng thái hiện tại của nội dung
+    const { groupId, groupName, rootDirId } = location.state || {};
+
+    const [currentView, setCurrentView] = useState('banner'); // Changed default view to banner
     const navigate = useNavigate();
 
     const [reFetch, setReFetch] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(0);  
+    const [isAdmin, setIsAdmin] = useState(0);
 
     const parseApiCheckAdmin = (response) => {
         const parts = response.split(' ');
@@ -55,24 +71,27 @@ const GroupDetail = () => {
 
 
     useEffect(() => {
+        if (!token) navigate('/login');
         fetchCheckAdmin();
-    }, [reFetch]);
+    }, []);
 
     const renderContent = () => {
         switch (currentView) {
+            case 'banner':
+                return <Banner groupName={groupName} />;
             case 'documents':
-                return <Documents groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
+                return <Documents groupId={groupId} rootDirId={rootDirId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch} />;
             case 'members':
-                return <Members groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
+                return <Members groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch} />;
             case 'requests':
-                return <Requests groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch}/>;
+                return <Requests groupId={groupId} token={token} isAdminProps={isAdmin} setReFetch={setReFetch} />;
             case 'leave':
                 return <LeaveGroup />;
             default:
                 return <div>Select an option from the menu</div>;
         }
     };
-    
+
     const handleLeaveGroup = async () => {
         try {
             const response = await window.electronAPI.leaveGroup(token, groupId);
@@ -99,6 +118,9 @@ const GroupDetail = () => {
                     onClick={({ key }) => setCurrentView(key)} // Thay đổi trạng thái khi nhấp vào menu
                     selectedKeys={[currentView]}
                 >
+                    <Menu.Item key="banner" icon={<HomeOutlined />}>
+                        Home
+                    </Menu.Item>
                     <Menu.Item key="documents" icon={<FolderOutlined />}>
                         Documents
                     </Menu.Item>
@@ -114,11 +136,11 @@ const GroupDetail = () => {
                 </Menu>
             </Sider>
             <Breadcrumb style={{ margin: '16px' }}>
-                    <Breadcrumb.Item>Home</Breadcrumb.Item>
-                    <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
+                <Breadcrumb.Item>Home</Breadcrumb.Item>
+                <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
             </Breadcrumb>
             <Content style={{ padding: 24 }}>
-                    {renderContent()}
+                {renderContent()}
             </Content>
         </Layout>
     );
