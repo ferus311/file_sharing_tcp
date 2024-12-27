@@ -198,21 +198,17 @@ ipcMain.handle('file-detail', async (event, token, groupId, fileId) => {
 });
 
 ipcMain.handle('download-file', async (event, token, fileId, fileName) => {
-    const client = new net.Socket();
-    const filePath = path.join(app.getPath('downloads'), `${fileName}`); // Lưu file trong thư mục Downloads
+    const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Save File',
+        defaultPath: path.join(app.getPath('downloads'), fileName),
+        buttonLabel: 'Save',
+    });
 
-    if (fs.existsSync(filePath)) {
-        const { response } = await dialog.showMessageBox({
-            type: 'question',
-            buttons: ['Overwrite', 'Cancel'],
-            title: 'File Exists',
-            message: `The file ${fileName} already exists. Do you want to overwrite it?`,
-        });
-
-        if (response === 1) {
-            return { success: false, message: 'Download cancelled by user' };
-        }
+    if (canceled) {
+        return { success: false, message: 'Download cancelled by user' };
     }
+
+    const client = new net.Socket();
 
     return new Promise((resolve, reject) => {
         let fileStream;
@@ -238,7 +234,7 @@ ipcMain.handle('download-file', async (event, token, fileId, fileName) => {
 
                 new Notification({
                     title: 'Download Complete',
-                    body: `File ${fileName} has been downloaded successfully in Downloads.`,
+                    body: `File ${path.basename(filePath)} has been downloaded successfully.`,
                 }).show();
 
                 resolve({ success: true, filePath });

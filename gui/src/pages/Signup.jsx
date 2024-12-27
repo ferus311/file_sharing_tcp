@@ -35,7 +35,6 @@ const Signup = () => {
                     navigate('/');
                 }, 3000); // Chờ 3 giây trước khi chuyển hướng và xóa thông báo
             } else {
-                // console.log('Signup failed:', response);
 
                 setErrorMessage('Signup failed. Please try again.');
                 setTimeout(() => {

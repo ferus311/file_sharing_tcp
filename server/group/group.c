@@ -126,9 +126,7 @@ int handle_create_group(int client_sock, const char *token, const char *group_na
     }
 
     // Step 6: Send the response back to the client
-    char response[1024];
-    snprintf(response, sizeof(response), "2000 %d\r\n", group_id);
-    send(client_sock, response, strlen(response), 0);
+    send(client_sock, "2000", 4, 0); // Success
 
     return 2000; // Success
 }

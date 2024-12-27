@@ -218,15 +218,8 @@ int handle_list_directory(int client_sock, const char *token, int group_id, int 
 
     mysql_free_result(res2); // Giải phóng kết quả truy vấn tệp
 
-    // Nếu có thư mục hoặc tệp, gửi kết quả về client
-    if (strlen(response) > 5) // Kiểm tra xem có thư mục hoặc tệp nào không (có '2000 ' ở đầu)
-    {
-        send(client_sock, response, strlen(response), 0);
-    }
-    else
-    {
-        send(client_sock, "4040\r\n", 6, 0); // Không có thư mục hay tệp nào
-    }
+    // Gửi kết quả về client
+    send(client_sock, response, strlen(response), 0);
 
     return 2000; // Thành công
 }
@@ -384,6 +377,68 @@ int handle_delete_file(int client_sock, const char *token, int file_id)
     return -1;
 }
 
+void delete_files_in_directory(int dir_id)
+{
+    char query[512];
+    snprintf(query, sizeof(query), "SELECT file_path FROM files WHERE dir_id = %d", dir_id);
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to query files in directory: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL)
+    {
+        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        if (row[0] != NULL)
+        {
+            remove(row[0]); // Delete the physical file
+        }
+    }
+
+    mysql_free_result(res);
+}
+
+void delete_subdirectories_and_files(int dir_id)
+{
+    char query[512];
+    snprintf(query, sizeof(query), "SELECT dir_id FROM directories WHERE parent_id = %d", dir_id);
+
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "Failed to query subdirectories: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL)
+    {
+        fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        int sub_dir_id = atoi(row[0]);
+        delete_files_in_directory(sub_dir_id);
+        delete_subdirectories_and_files(sub_dir_id);
+    }
+
+    mysql_free_result(res);
+
+    // Delete files in the current directory
+    delete_files_in_directory(dir_id);
+}
+
 int handle_delete_folder(int client_sock, const char *token, int dir_id)
 {
     char query[512];
@@ -434,6 +489,9 @@ int handle_delete_folder(int client_sock, const char *token, int dir_id)
         return -1;
     }
     mysql_free_result(res);
+
+    // Xóa các tệp và thư mục con
+    delete_subdirectories_and_files(dir_id);
 
     // Xóa thư mục khỏi bảng directories
     snprintf(query, sizeof(query), "DELETE FROM directories WHERE dir_id = %d", dir_id);
@@ -785,6 +843,30 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
         char dest_path[FILE_PATH_SIZE];
         snprintf(dest_path, sizeof(dest_path), "uploads/group_%d/dir_%d/%s", group_id, target_dir_id, row[0]);
 
+        // Check if the file already exists in the target directory
+        snprintf(query, sizeof(query), "SELECT file_id, file_path FROM files WHERE file_name = '%s' AND dir_id = %d", row[0], target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            perror("Failed to query existing file");
+            mysql_free_result(res);
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        MYSQL_RES *res2 = mysql_store_result(conn);
+        if (res2)
+        {
+            MYSQL_ROW row2 = mysql_fetch_row(res2);
+            if (row2)
+            {
+                // File exists, remove it from the filesystem and database
+                remove(row2[1]);
+                snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %s", row2[0]);
+                mysql_query(conn, query);
+            }
+            mysql_free_result(res2);
+        }
+
         // Create destination directory if it does not exist
         char dest_dir[FILE_PATH_SIZE];
         snprintf(dest_dir, sizeof(dest_dir), "uploads/group_%d/dir_%d", group_id, target_dir_id);
@@ -879,6 +961,23 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
         char dir_name[256];
         snprintf(dir_name, sizeof(dir_name), "%s", row[0]);
         mysql_free_result(res);
+
+        // Check if the directory already exists in the target directory
+        snprintf(query, sizeof(query), "SELECT dir_id FROM directories WHERE dir_name = '%s' AND parent_id = %d", dir_name, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        MYSQL_RES *res2 = mysql_store_result(conn);
+        if (res2 && mysql_num_rows(res2) > 0)
+        {
+            MYSQL_ROW row2 = mysql_fetch_row(res2);
+            snprintf(query, sizeof(query), "DELETE FROM directories WHERE dir_id = %s", row2[0]);
+            mysql_query(conn, query);
+            mysql_free_result(res2);
+        }
 
         // Insert the new directory into the database
         snprintf(query, sizeof(query), "INSERT INTO directories (dir_name, parent_id, group_id, created_by) VALUES ('%s', %d, %d, %d)", dir_name, target_dir_id, group_id, user_id);
@@ -1003,6 +1102,28 @@ void handle_move_item(int client_sock, const char *token, int item_id, int targe
 
     if (is_file)
     {
+        // Check if the file already exists in the target directory
+        snprintf(query, sizeof(query), "SELECT file_id, file_path FROM files WHERE file_name = (SELECT file_name FROM files WHERE file_id = %d) AND dir_id = %d", item_id, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        MYSQL_RES *res2 = mysql_store_result(conn);
+        if (res2)
+        {
+            MYSQL_ROW row2 = mysql_fetch_row(res2);
+            if (row2)
+            {
+                // File exists, remove it from the filesystem and database
+                remove(row2[1]);
+                snprintf(query, sizeof(query), "DELETE FROM files WHERE file_id = %s", row2[0]);
+                mysql_query(conn, query);
+            }
+            mysql_free_result(res2);
+        }
+
         // Move file
         snprintf(query, sizeof(query), "UPDATE files SET dir_id = %d WHERE file_id = %d", target_dir_id, item_id);
         if (mysql_query(conn, query))
@@ -1020,6 +1141,23 @@ void handle_move_item(int client_sock, const char *token, int item_id, int targe
     }
     else
     {
+        // Check if the directory already exists in the target directory
+        snprintf(query, sizeof(query), "SELECT dir_id FROM directories WHERE dir_name = (SELECT dir_name FROM directories WHERE dir_id = %d) AND parent_id = %d", item_id, target_dir_id);
+        if (mysql_query(conn, query))
+        {
+            send_status(client_sock, 5000); // SQL query error
+            return;
+        }
+
+        MYSQL_RES *res2 = mysql_store_result(conn);
+        if (res2 && mysql_num_rows(res2) > 0)
+        {
+            MYSQL_ROW row2 = mysql_fetch_row(res2);
+            snprintf(query, sizeof(query), "DELETE FROM directories WHERE dir_id = %s", row2[0]);
+            mysql_query(conn, query);
+            mysql_free_result(res2);
+        }
+
         // Move directory
         snprintf(query, sizeof(query), "UPDATE directories SET parent_id = %d WHERE dir_id = %d", target_dir_id, item_id);
         if (mysql_query(conn, query))

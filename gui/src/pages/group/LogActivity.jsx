@@ -22,11 +22,9 @@ const LogActivity = ({ groupId }) => {
         try {
             const response = await window.electronAPI.sendLogActivity(token, groupId, timestamp);
             const cleanResponse = response.startsWith('2000') ? response.slice(5) : response;
-            console.log('Log Activity:', response);
-
             const parsedLogs = parseLogEntries(cleanResponse);
             setLogEntries(parsedLogs);
-            message.success('Log activity fetched successfully.');
+            // message.success('Log activity fetched successfully.');
         } catch (error) {
             console.error('Error:', error);
             // message.error('An error occurred while fetching log activity.');

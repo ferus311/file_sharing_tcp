@@ -32,28 +32,28 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
     const [itemToMove, setItemToMove] = useState(null);
     const [moveTargetDirId, setMoveTargetDirId] = useState(null);
 
+    const [overwriteCopyConfirmVisible, setOverwriteCopyConfirmVisible] = useState(false);
+    const [overwriteMoveConfirmVisible, setOverwriteMoveConfirmVisible] = useState(false);
+
     useEffect(() => {
         fetchListGroupContent();
     }, [groupId, dirId]);
 
     const fetchListGroupContent = async () => {
-        console.log("----------Start fetchListGroupContent-----------")
         setLoading(true);
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.listDirectory(cleanToken, groupId, dirId);
-            console.log("fetchListGroupContent>>> " + response);
             if (!isAdminProps) setReFetch(true);
-
 
             if (response.startsWith('2000')) {
                 let data = response.slice(5).trim();
                 if (data.endsWith('||')) data = data.slice(0, -2);
 
-                const dataArray = data.split('||').map(item => {
+                const dataArray = data ? data.split('||').map(item => {
                     const [type, id, name] = item.split('&');
                     return { type, id: parseInt(id, 10), name };
-                });
+                }) : [];
 
                 setItems(dataArray);
             } else {
@@ -69,15 +69,12 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
     };
 
     const handleDeleteItem = async (itemId, itemType) => {
-        console.log(`Deleting item with ID: ${itemId}`);
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             let response = "";
 
             if (itemType === 'D') response = await window.electronAPI.deleteFolder(cleanToken, itemId);
             else if (itemType === 'F') response = await window.electronAPI.deleteFile(cleanToken, itemId);
-
-            console.log("reshandleDeleteItem: " + response)
 
             if (response.startsWith('2000')) {
                 message.success("Item deleted successfully");
@@ -142,7 +139,6 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
             try {
                 const response = await window.electronAPI.uploadFile(token, groupId, dirId, dataString);
-                console.log(response);
                 if (response.startsWith('2001')) {
                     // Chunk upload successful
                 } else if (response.startsWith('2000')) {
@@ -183,9 +179,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
     const handleDownloadFile = async (fileId, fileName) => {
         try {
-            // console.log('Downloading file:', fileId);
             const result = await window.electronAPI.downloadFile(token, fileId, fileName);
-            console.log(result);
 
             if (result.success) {
                 alert(`File has been downloaded to: ${result.filePath}`);
@@ -216,8 +210,42 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
         }
     };
 
+    const fetchTargetDirContent = async (targetDirId) => {
+        try {
+            const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
+            const response = await window.electronAPI.listDirectory(cleanToken, groupId, targetDirId);
+            if (response.startsWith('2000')) {
+                let data = response.slice(5).trim();
+                if (data.endsWith('||')) data = data.slice(0, -2);
+
+                const dataArray = data.split('||').map(item => {
+                    const [type, id, name] = item.split('&');
+                    return { type, id: parseInt(id, 10), name };
+                });
+
+                return dataArray;
+            } else {
+                console.error('Failed to fetch target directory content:', response);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching target directory content:', error);
+            return [];
+        }
+    };
+
     const handleCopyItem = async () => {
         if (!itemToCopy || !targetDirId) return;
+        const targetItems = await fetchTargetDirContent(targetDirId);
+        const existingItem = targetItems.find(item => item.name === itemToCopy.name && item.type === itemToCopy.type);
+        if (existingItem) {
+            setOverwriteCopyConfirmVisible(true);
+            return;
+        }
+        await copyItem();
+    };
+
+    const copyItem = async () => {
         setCopying(true);
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
@@ -237,6 +265,11 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             setItemToCopy(null);
             setTargetDirId(null);
         }
+    };
+
+    const confirmOverwriteCopy = async () => {
+        setOverwriteCopyConfirmVisible(false);
+        await copyItem();
     };
 
     const handleRenameItem = async () => {
@@ -263,6 +296,16 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
     const handleMoveItem = async () => {
         if (!itemToMove || !moveTargetDirId) return;
+        const targetItems = await fetchTargetDirContent(moveTargetDirId);
+        const existingItem = targetItems.find(item => item.name === itemToMove.name && item.type === itemToMove.type);
+        if (existingItem) {
+            setOverwriteMoveConfirmVisible(true);
+            return;
+        }
+        await moveItem();
+    };
+
+    const moveItem = async () => {
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.moveItem(cleanToken, itemToMove.id, moveTargetDirId, itemToMove.type === 'F');
@@ -283,6 +326,11 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
         }
     };
 
+    const confirmOverwriteMove = async () => {
+        setOverwriteMoveConfirmVisible(false);
+        await moveItem();
+    };
+
     return (
         <>
             {uploading && (
@@ -299,6 +347,26 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                 cancelText="Cancel"
             >
                 <p>A file with the same name already exists. Do you want to overwrite it?</p>
+            </Modal>
+            <Modal
+                title="Item already exists"
+                visible={overwriteCopyConfirmVisible}
+                onOk={confirmOverwriteCopy}
+                onCancel={() => setOverwriteCopyConfirmVisible(false)}
+                okText="Overwrite"
+                cancelText="Cancel"
+            >
+                <p>An item with the same name already exists in the target directory. Do you want to overwrite it?</p>
+            </Modal>
+            <Modal
+                title="Item already exists"
+                visible={overwriteMoveConfirmVisible}
+                onOk={confirmOverwriteMove}
+                onCancel={() => setOverwriteMoveConfirmVisible(false)}
+                okText="Overwrite"
+                cancelText="Cancel"
+            >
+                <p>An item with the same name already exists in the target directory. Do you want to overwrite it?</p>
             </Modal>
             <Modal
                 title="Copy Item"
@@ -374,6 +442,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                 grid={{ gutter: 16, column: 4 }}
                 dataSource={items}
                 loading={loading}
+                locale={{ emptyText: 'No documents in this group' }} // Add this line
                 renderItem={item => (
                     <List.Item key={item.id}>
                         <Card

@@ -17,7 +17,6 @@ const JoinGroup = () => {
     try {
       setLoading(true);
       const response = await window.electronAPI.listGroupsNotJoined(token);
-      console.log("fetchGroupsNotJoined:", response);
       if (response.startsWith("2000")) {
         const [joinableSection, pendingSection] = response
           .slice(5)

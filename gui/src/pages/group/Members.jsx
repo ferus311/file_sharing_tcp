@@ -19,7 +19,6 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
     };
 
     const handleDeleteMember = async (memberId) => {
-        console.log(`Deleting member with ID: ${memberId}`);
         try {
             const response = await window.electronAPI.removeMember(token, groupId, memberId);
             if (response.startsWith('2000')) {
@@ -36,10 +35,8 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
     };
 
     const fetchGroupMembers = async () => {
-        console.log("----------Start fetchGroupMembers-----------")
         try {
             const response = await window.electronAPI.listGroupMembers(token, groupId);
-            console.log("fetchGroupMembers: " + response);
             if(!isAdminProps) setReFetch(true);
 
             if (response.startsWith('2000')) {

@@ -35,8 +35,6 @@ const FileDetail = () => {
 
     const handleDownloadFile = async () => {
         try {
-            console.log('Downloading file:', fileId);
-
             const result = await window.electronAPI.downloadFile(token, fileId);
             if (result.success) {
                 alert(`File has been downloaded to: ${result.filePath}`);

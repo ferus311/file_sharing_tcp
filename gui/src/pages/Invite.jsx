@@ -16,7 +16,6 @@ const Invite = () => {
     try {
       setLoading(true);
       const response = await window.electronAPI.listInvitations(token);
-      console.log("fetchInvitations:", response);
       if (response.startsWith("2000")) {
         const data = response
           .slice(5)
@@ -39,13 +38,11 @@ const Invite = () => {
 
   const respondToInvitation = async (requestId, approvalStatus) => {
     try {
-        console.log(requestId + " --- " + approvalStatus)
       const response = await window.electronAPI.respondInvitation(
         token,
         requestId,
         approvalStatus
       );
-      console.log(`${approvalStatus} response:`, response);
       if (response.startsWith("2000")) {
         message.success(
           `Invitation ${approvalStatus === "accepted" ? "accepted" : "rejected"

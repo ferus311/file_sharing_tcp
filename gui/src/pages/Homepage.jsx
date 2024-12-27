@@ -28,7 +28,6 @@ const Homepage = () => {
 
             if (response.startsWith('2000')) {
                 const data = response.slice(5); // Loại bỏ mã 2000 và khoảng trắng
-                console.log(data);
                 if (data.trim() === "") {
                     setGroups([]);
                     // message.info('Bạn chưa vào group nào.');

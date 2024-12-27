@@ -53,11 +53,9 @@ const GroupDetail = () => {
     };
 
     const fetchCheckAdmin = async () => {
-        console.log("----------Start fetchCheckAdmin-----------")
         try {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response2 = await window.electronAPI.checkAdmin(cleanToken, groupId);
-            console.log("fetchCheckAdmin: " + response2);
             setReFetch(false)
             if (response2.startsWith('2000')) {
                 const result = parseApiCheckAdmin(response2);
@@ -141,12 +139,13 @@ const GroupDetail = () => {
                     </Menu.Item>
                 </Menu>
             </Sider>
-            <Breadcrumb style={{ margin: '16px' }}>
-                <Breadcrumb.Item>Home</Breadcrumb.Item>
-                <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
-                <Breadcrumb.Item>Root Dir Id : {rootDirId}</Breadcrumb.Item>
-            </Breadcrumb>
+
             <Content style={{ padding: 24 }}>
+                <Breadcrumb style={{ margin: '16px' }}>
+                    <Breadcrumb.Item>Home</Breadcrumb.Item>
+                    <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
+                    <Breadcrumb.Item>Root Dir Id : {rootDirId}</Breadcrumb.Item>
+                </Breadcrumb>
                 {renderContent()}
             </Content>
         </Layout>
