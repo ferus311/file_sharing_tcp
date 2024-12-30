@@ -751,8 +751,6 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
         return;
     }
 
-    printf("Debug: User ID: %d\n", user_id);
-
     // Check if the target directory belongs to the user's group
     snprintf(query, sizeof(query), "SELECT group_id FROM directories WHERE dir_id = %d", target_dir_id);
     if (mysql_query(conn, query))
@@ -771,17 +769,8 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
     }
 
     MYSQL_ROW row = mysql_fetch_row(res);
-    if (row == NULL)
-    {
-        send_status(client_sock, 4040); // Directory not found
-        mysql_free_result(res);
-        return;
-    }
-
     int group_id = atoi(row[0]);
     mysql_free_result(res);
-
-    printf("Debug: Group ID: %d\n", group_id);
 
     // Check if the user is an admin of the group
     snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
@@ -801,15 +790,13 @@ void handle_copy_item(int client_sock, const char *token, int item_id, int targe
     }
 
     row = mysql_fetch_row(res);
-    if (row == NULL || strcmp(row[0], "admin") != 0)
+    if (strcmp(row[0], "admin") != 0)
     {
         send_status(client_sock, 4030); // No permission
         mysql_free_result(res);
         return;
     }
     mysql_free_result(res);
-
-    printf("Debug: User is admin\n");
 
     if (is_file)
     {
@@ -1188,6 +1175,52 @@ void handle_rename_item(int client_sock, const char *token, int item_id, const c
         send_status(client_sock, 4030); // Invalid token
         return;
     }
+
+    // Check if the user is an admin of the group
+    snprintf(query, sizeof(query), "SELECT group_id FROM %s WHERE %s_id = %d", is_file ? "files" : "directories", is_file ? "file" : "dir", item_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4040); // Item not found
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int group_id = atoi(row[0]);
+    mysql_free_result(res);
+
+    snprintf(query, sizeof(query), "SELECT role FROM user_groups WHERE user_id = %d AND group_id = %d", user_id, group_id);
+    if (mysql_query(conn, query))
+    {
+        send_status(client_sock, 5000); // SQL query error
+        return;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL || mysql_num_rows(res) == 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        if (res)
+            mysql_free_result(res);
+        return;
+    }
+
+    row = mysql_fetch_row(res);
+    if (strcmp(row[0], "admin") != 0)
+    {
+        send_status(client_sock, 4030); // No permission
+        mysql_free_result(res);
+        return;
+    }
+    mysql_free_result(res);
 
     if (is_file)
     {

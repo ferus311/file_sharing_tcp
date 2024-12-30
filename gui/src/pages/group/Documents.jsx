@@ -136,7 +136,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
             // Chuỗi dữ liệu cần upload
             const dataString = `${file.name}||${fileExtension}||${chunkIndex}||${totalChunks}||${chunkData}`;
-
+            message.info(`Uploading chunk ${chunkIndex + 1} of ${totalChunks}...`);
             try {
                 const response = await window.electronAPI.uploadFile(token, groupId, dirId, dataString);
                 if (response.startsWith('2001')) {
@@ -333,11 +333,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
     return (
         <>
-            {uploading && (
-                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                    <Spin size="large" tip={`Uploading ${uploadingFileName}...`} />
-                </div>
-            )}
+            {/* Remove the loading spinner */}
             <Modal
                 title="File already exists"
                 visible={overwriteConfirmVisible}
@@ -476,32 +472,36 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                                             }}
                                         />
                                     )}
-                                    <Button
-                                        type="text"
-                                        icon={<CopyOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setItemToCopy(item);
-                                        }}
-                                    />
-                                    <Button
-                                        type="text"
-                                        icon={<EditOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setItemToRename(item);
-                                            setIsRenameModalVisible(true);
-                                        }}
-                                    />
-                                    <Button
-                                        type="text"
-                                        icon={<ArrowRightOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setItemToMove(item);
-                                            setIsMoveModalVisible(true);
-                                        }}
-                                    />
+                                    {isAdmin === 1 && (
+                                        <>
+                                            <Button
+                                                type="text"
+                                                icon={<CopyOutlined />}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setItemToCopy(item);
+                                                }}
+                                            />
+                                            <Button
+                                                type="text"
+                                                icon={<EditOutlined />}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setItemToRename(item);
+                                                    setIsRenameModalVisible(true);
+                                                }}
+                                            />
+                                            <Button
+                                                type="text"
+                                                icon={<ArrowRightOutlined />}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setItemToMove(item);
+                                                    setIsMoveModalVisible(true);
+                                                }}
+                                            />
+                                        </>
+                                    )}
                                 </>
                             }
                         >

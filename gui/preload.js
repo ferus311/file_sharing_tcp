@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const handleResponse = async (promise) => {
     try {
         const response = await promise;
-        // console.log('Response from server:', response);
+        console.log('Response from server:', response);
         if (response.startsWith('4011')) {
             localStorage.removeItem('token');
             ipcRenderer.send('token-expired');
