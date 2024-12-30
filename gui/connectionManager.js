@@ -1,5 +1,8 @@
 const net = require('net');
 
+const address = process.env.SERVER_ADDRESS || '127.0.0.1';
+const port = process.env.SERVER_PORT || 1234;
+
 class ConnectionManager {
     constructor() {
         this.client = new net.Socket();
@@ -48,7 +51,7 @@ class ConnectionManager {
             }
 
             this.isConnecting = true; // Đánh dấu là đang kết nối
-            this.client.connect(1234, '127.0.0.1', () => {
+            this.client.connect(port, address, () => {
                 this.isConnected = true;
                 this.isConnecting = false; // Kết nối thành công
                 resolve();

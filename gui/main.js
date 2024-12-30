@@ -4,6 +4,9 @@ const net = require('net');
 const fs = require('fs');
 const connectionManager = require('./connectionManager');
 
+const address = process.env.SERVER_ADDRESS || '127.0.0.1';
+const port = process.env.SERVER_PORT || 1234;
+
 function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 800,
@@ -216,7 +219,7 @@ ipcMain.handle('download-file', async (event, token, fileId, fileName) => {
         try {
             fileStream = fs.createWriteStream(filePath);
 
-            client.connect(1234, '127.0.0.1', () => {
+            client.connect(port, address, () => {
                 console.log('Connected to server');
                 const message = `DOWNLOAD_FILE ${token} ${fileId}\r\n`;
                 client.write(message);

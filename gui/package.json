@@ -20,7 +20,7 @@
         "test": "react-scripts test",
         "eject": "react-scripts eject",
         "dev-react": "react-scripts start",
-        "dev-electron": "ELECTRON_START_URL=http://localhost:3000 electron .",
+        "dev-electron": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
         "dev": "concurrently \"npm run dev-react\" \"npm run dev-electron\"",
         "electron-pack": "react-scripts build && electron ."
     },
@@ -44,6 +44,7 @@
     },
     "devDependencies": {
         "concurrently": "^9.1.0",
+        "cross-env": "^7.0.3",
         "electron": "^33.2.0"
     }
 }
