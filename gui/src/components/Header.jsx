@@ -1,26 +1,42 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Dropdown, Menu } from "antd";
-import { useState } from "react";
+import { Dropdown, Menu, Select } from "antd";
+import { useState, useEffect } from "react";
 import SearchGroups from "./SearchGroups";
+import { useTranslation } from 'react-i18next'; // Import useTranslation
+import { GlobalOutlined } from '@ant-design/icons'; // Import icon
+
+const { Option } = Select;
 
 const Header = () => {
+    const { t, i18n } = useTranslation(); // Initialize useTranslation
     const { token, username, logout } = useAuth();
     const navigate = useNavigate();
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+
+    useEffect(() => {
+        const currentLanguage = i18n.language || 'en';
+        setSelectedLanguage(currentLanguage);
+    }, [i18n.language]);
 
     const handleLogout = () => {
         logout();
         navigate("/");
     };
 
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng);
+        setSelectedLanguage(lng);
+    };
+
     const menu = (
         <Menu>
             <Menu.Item key="profile" onClick={() => navigate("/profile")}>
-                Profile
+                {t('profile')}
             </Menu.Item>
             <Menu.Item key="logout" onClick={handleLogout}>
-                Log Out
+                {t('logout')}
             </Menu.Item>
         </Menu>
     );
@@ -37,7 +53,7 @@ const Header = () => {
                             <div class="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
                                 <div class="offcanvas__logo">
                                     <a href="/">
-                                        <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
+                                        <img src="/assets/img/logo/white-logo.svg" alt="logo-img" />
                                     </a>
                                 </div>
                                 <div class="offcanvas__close">
@@ -60,10 +76,10 @@ const Header = () => {
                                 <div className="header-left">
                                     <div className="logo">
                                         <a href="/" className="header-logo">
-                                            <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
+                                            <img src="/assets/img/logo/white-logo.svg" alt="logo-img" />
                                         </a>
                                         <a href="/" className="header-logo-2">
-                                            <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
+                                            <img src="/assets/img/logo/white-logo.svg" alt="logo-img" />
                                         </a>
                                     </div>
                                 </div>
@@ -73,21 +89,21 @@ const Header = () => {
                                             <nav id="mobile-menu">
                                                 <ul>
                                                     <li>
-                                                        <Link to="/" style={{ color: 'white' }}>Home</Link>
+                                                        <Link to="/" style={{ color: 'white' }}>{t('home')}</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/invite" style={{ color: 'white' }}>Invite</Link>
+                                                        <Link to="/invite" style={{ color: 'white' }}>{t('invite')}</Link>
                                                     </li>
                                                     <li>
-                                                        <Link to="/join-group" style={{ color: 'white' }}>Join group</Link>
+                                                        <Link to="/join-group" style={{ color: 'white' }}>{t('join_group')}</Link>
                                                     </li>
                                                 </ul>
                                             </nav>
                                         </div>
                                     </div>
-                                    <button style={{ color: 'white' }} onClick={() => setIsModalVisible(true)}>
+                                    {/* <button style={{ color: 'white' }} onClick={() => setIsModalVisible(true)}>
                                         <i className="fal fa-search"></i>
-                                    </button>
+                                    </button> */}
                                     <SearchGroups
                                         visible={isModalVisible}
                                         onClose={() => setIsModalVisible(false)}
@@ -101,18 +117,28 @@ const Header = () => {
                                         {token ? (
                                             <Dropdown overlay={menu} trigger={['click']}>
                                                 <span className="user-info theme-btn" style={{ color: 'white' }}>
-                                                    Welcome, {username}!
+                                                    {t('welcome')}, {username}!
                                                 </span>
                                             </Dropdown>
                                         ) : (
                                             <Link to={"/login"}>
                                                 <a className="theme-btn" style={{ color: 'white' }}>
-                                                    Login
+                                                    {t('login')}
                                                     <i className="fa-solid fa-arrow-right-long"></i>
                                                 </a>
                                             </Link>
                                         )}
                                     </div>
+                                    <Select
+                                        value={selectedLanguage}
+                                        style={{ width: 120, marginLeft: '10px', zIndex: '1500' }}
+                                        onChange={changeLanguage}
+                                        suffixIcon={<GlobalOutlined />}
+                                    >
+                                        <Option style={{ marginTop: '20px' }} value="en">English</Option>
+                                        <Option value="ja">日本語</Option>
+                                        <Option value="vi">Tiếng Việt</Option>
+                                    </Select>
                                 </div>
                             </div>
                         </div>

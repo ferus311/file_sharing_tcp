@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import './i18n'; // Import i18n
 
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -13,6 +14,10 @@ import GroupDetail from './pages/GroupDetail';
 import FileDetail from './pages/FileDetail';
 import './style.css';
 
+function PrivateRoute({ children }) {
+    const { token } = useContext(AuthContext);
+    return token ? children : <Navigate to="/login" />;
+}
 
 function App() {
     return (
@@ -24,12 +29,23 @@ function App() {
                     <Route
                         path="/group/:groupId"
                         element={
-                            <Layout>
-                                <GroupDetail />
-                            </Layout>
+                            <PrivateRoute>
+                                <Layout>
+                                    <GroupDetail />
+                                </Layout>
+                            </PrivateRoute>
                         }
                     />
-                    <Route path="/group/:groupId/file/:fileId" element={<Layout><FileDetail /></Layout>} />
+                    <Route
+                        path="/group/:groupId/file/:fileId"
+                        element={
+                            <PrivateRoute>
+                                <Layout>
+                                    <FileDetail />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
                     <Route
                         path="/"
                         element={
@@ -41,17 +57,21 @@ function App() {
                     <Route
                         path="/invite"
                         element={
-                            <Layout>
-                                <Invite />
-                            </Layout>
+                            <PrivateRoute>
+                                <Layout>
+                                    <Invite />
+                                </Layout>
+                            </PrivateRoute>
                         }
                     />
                     <Route
                         path="/join-group"
                         element={
-                            <Layout>
-                                <JoinGroup />
-                            </Layout>
+                            <PrivateRoute>
+                                <Layout>
+                                    <JoinGroup />
+                                </Layout>
+                            </PrivateRoute>
                         }
                     />
                 </Routes>

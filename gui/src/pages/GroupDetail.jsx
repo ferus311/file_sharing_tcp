@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Breadcrumb, message } from 'antd';
 import { FolderOutlined, TeamOutlined, LogoutOutlined, PlusSquareOutlined, HomeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import './GroupDetail.css';
+
 import { useAuth } from '../context/AuthContext';
 import Documents from '../pages/group/Documents';
 import Members from '../pages/group/Members';
 import Requests from '../pages/group/Requests';
 import LogActivity from '../pages/group/LogActivity';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const { Sider, Content } = Layout;
 message.config({
@@ -19,22 +20,26 @@ message.config({
 const LeaveGroup = () => <div>Leave Group Component</div>;
 
 // Add Banner component
-const Banner = ({ groupName }) => (
-    <div style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        background: '#f0f2f5',
-        borderRadius: '8px',
-        margin: '20px 0'
-    }}>
-        <h1 style={{ fontSize: '2.5em', marginBottom: '20px' }}>Welcome to {groupName}</h1>
-        <p style={{ fontSize: '1.2em', color: '#666' }}>
-            Collaborate with your team members and manage your documents efficiently.
-        </p>
-    </div>
-);
+const Banner = ({ groupName }) => {
+    const { t } = useTranslation(); // Initialize useTranslation
+    return (
+        <div style={{
+            padding: '40px 20px',
+            textAlign: 'center',
+            background: '#f0f2f5',
+            borderRadius: '8px',
+            margin: '20px 0'
+        }}>
+            <h1 style={{ fontSize: '2.5em', marginBottom: '20px' }}>{t('welcome_to')} {groupName}</h1>
+            <p style={{ fontSize: '1.2em', color: '#666' }}>
+                {t('collaborate_with_team')}
+            </p>
+        </div>
+    );
+};
 
 const GroupDetail = () => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const { token } = useAuth();
     const location = useLocation();
     const { groupId, groupName, rootDirId } = location.state || {};
@@ -89,7 +94,7 @@ const GroupDetail = () => {
             case 'leave':
                 return <LeaveGroup />;
             default:
-                return <div>Select an option from the menu</div>;
+                return <div>{t('select_option')}</div>;
         }
     };
 
@@ -97,14 +102,14 @@ const GroupDetail = () => {
         try {
             const response = await window.electronAPI.leaveGroup(token, groupId);
             if (response.startsWith('2000')) {
-                message.success('You have left the group successfully.');
+                message.success(t('left_group_successfully'));
                 navigate('/');
             } else {
-                message.error('Failed to leave the group.');
+                message.error(t('failed_to_leave_group'));
             }
         } catch (error) {
             console.error('Error leaving group:', error);
-            message.error('An error occurred while leaving the group.');
+            message.error(t('error_leaving_group'));
         }
     };
 
@@ -120,31 +125,31 @@ const GroupDetail = () => {
                     selectedKeys={[currentView]}
                 >
                     <Menu.Item key="banner" icon={<HomeOutlined />}>
-                        Home
+                        {t('home')}
                     </Menu.Item>
                     <Menu.Item key="documents" icon={<FolderOutlined />}>
-                        Documents
+                        {t('documents')}
                     </Menu.Item>
                     <Menu.Item key="members" icon={<TeamOutlined />}>
-                        Members
+                        {t('members')}
                     </Menu.Item>
                     <Menu.Item key="requests" icon={<PlusSquareOutlined />}>
-                        Requests
+                        {t('requests')}
                     </Menu.Item>
                     <Menu.Item key="logActivity" icon={<FileTextOutlined />}>
-                        Log Activity
+                        {t('log_activity')}
                     </Menu.Item>
                     <Menu.Item key="leave" onClick={handleLeaveGroup} icon={<LogoutOutlined />} style={{ color: 'red' }}>
-                        Leave Group
+                        {t('leave_group')}
                     </Menu.Item>
                 </Menu>
             </Sider>
 
             <Content style={{ padding: 24 }}>
                 <Breadcrumb style={{ margin: '16px' }}>
-                    <Breadcrumb.Item>Home</Breadcrumb.Item>
+                    <Breadcrumb.Item>{t('home')}</Breadcrumb.Item>
                     <Breadcrumb.Item>{groupName}</Breadcrumb.Item>
-                    <Breadcrumb.Item>Root Dir Id : {rootDirId}</Breadcrumb.Item>
+                    <Breadcrumb.Item>{t('root_dir_id')} : {rootDirId}</Breadcrumb.Item>
                 </Breadcrumb>
                 {renderContent()}
             </Content>

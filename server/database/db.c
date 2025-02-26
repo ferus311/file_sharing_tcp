@@ -6,7 +6,7 @@
 #define MYSQL_HOST "localhost"
 #define MYSQL_USER "fong"
 #define MYSQL_PASS "123"
-#define MYSQL_DB "file_sharing_v2"
+#define MYSQL_DB "file_sharing"
 
 // Initialize MySQL connection
 void init_mysql() {

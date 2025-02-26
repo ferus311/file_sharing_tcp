@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Typography, List, Avatar, Button, Tag, message, Select, Form } from 'antd';
 import { UserOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const [listJoinRequests, setListJoinRequests] = useState([]); // Join requests
     const [listInvitations, setListInvitations] = useState([]); // Invitations
     const [availableUsers, setAvailableUsers] = useState([]); // Users available for invitation
@@ -88,7 +90,7 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
     const handleAction = async (action, requestId) => {
         const response = await window.electronAPI.approveJoinRequest(token, requestId, action);
         if (response.startsWith('2000')) {
-            message.success(`${action} successfully`);
+            message.success(t(`${action}_successfully`));
             await fetchListRequests();
         } else {
             console.error('Failed to perform action on request:', response);
@@ -100,39 +102,39 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
             const { user_id } = values;
             const response = await window.electronAPI.inviteUserToGroup(token, groupId, user_id);
             if (response.startsWith('2000')) {
-                message.success('Invitation sent successfully');
+                message.success(t('invitation_sent_successfully'));
                 fetchListRequests();
                 setAvailableUsers([]); // Clear available users
             } else {
-                message.error('Failed to send invitation');
+                message.error(t('failed_to_send_invitation'));
             }
         } catch (error) {
             console.error('Error sending invitation:', error);
-            message.error('Failed to send invitation');
+            message.error(t('failed_to_send_invitation'));
         }
     };
 
     return (
         <div className="container">
             <Typography.Title level={3}>
-                {isAdmin === 1 ? "Admin View - Manage Requests" : "Request Overview"}
+                {isAdmin === 1 ? t('admin_view_manage_requests') : t('request_overview')}
             </Typography.Title>
 
             {/* Invitation Sending Section */}
             {isAdmin === 1 && (
                 <div style={{ marginBottom: '20px' }}>
-                    <Typography.Title level={4}>Invite Users</Typography.Title>
+                    <Typography.Title level={4}>{t('invite_users')}</Typography.Title>
                     <Form
                         layout="inline"
                         onFinish={handleSendInvitation}
                     >
                         <Form.Item
                             name="user_id"
-                            rules={[{ required: true, message: 'Please select a user to invite' }]}
+                            rules={[{ required: true, message: t('please_select_user_to_invite') }]}
                         >
                             <Select
                                 style={{ width: 300 }}
-                                placeholder="Select a user to invite"
+                                placeholder={t('select_user_to_invite')}
                                 options={availableUsers.map(user => ({
                                     value: user.user_id,
                                     label: user.user_name,
@@ -143,7 +145,7 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
                         </Form.Item>
                         <Form.Item>
                             <Button type="primary" htmlType="submit">
-                                Send Invitation
+                                {t('send_invitation')}
                             </Button>
                         </Form.Item>
                     </Form>
@@ -151,7 +153,7 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
             )}
 
             {/* Join Requests Section */}
-            <Typography.Title level={4}>Join Requests</Typography.Title>
+            <Typography.Title level={4}>{t('join_requests')}</Typography.Title>
             <List
                 itemLayout="vertical"
                 dataSource={listJoinRequests}
@@ -159,27 +161,27 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
                     <List.Item
                         actions={isAdmin === 1 && request.status === 'pending'
                             ? [
-                                  <Button
-                                      type="text"
-                                      icon={<CheckOutlined style={{ color: 'green' }} />}
-                                      onClick={() => handleAction('accepted', request.request_id)}
-                                  >
-                                      Accept
-                                  </Button>,
-                                  <Button
-                                      type="text"
-                                      icon={<CloseOutlined style={{ color: 'red' }} />}
-                                      onClick={() => handleAction('rejected', request.request_id)}
-                                  >
-                                      Reject
-                                  </Button>,
-                              ]
+                                <Button
+                                    type="text"
+                                    icon={<CheckOutlined style={{ color: 'green' }} />}
+                                    onClick={() => handleAction('accepted', request.request_id)}
+                                >
+                                    {t('accept')}
+                                </Button>,
+                                <Button
+                                    type="text"
+                                    icon={<CloseOutlined style={{ color: 'red' }} />}
+                                    onClick={() => handleAction('rejected', request.request_id)}
+                                >
+                                    {t('reject')}
+                                </Button>,
+                            ]
                             : []
                         }
                     >
                         <List.Item.Meta
                             avatar={<Avatar icon={<UserOutlined />} />}
-                            title={`Join Request from ${request.user_name}`}
+                            title={t('join_request_from', { user_name: request.user_name })}
                             description={
                                 <>
                                     <Tag
@@ -187,14 +189,14 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
                                             request.status === 'pending'
                                                 ? 'blue'
                                                 : request.status === 'accepted'
-                                                ? 'green'
-                                                : 'red'
+                                                    ? 'green'
+                                                    : 'red'
                                         }
                                     >
-                                        {request.status.toUpperCase()}
+                                        {t(request.status.toLowerCase())}
                                     </Tag>
                                     <Typography.Text type="secondary">
-                                        {`Created at: ${request.created_at}`}
+                                        {t('created_at', { created_at: request.created_at })}
                                     </Typography.Text>
                                 </>
                             }
@@ -204,7 +206,7 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
             />
 
             {/* Invitations Section */}
-            <Typography.Title level={4}>Invitations</Typography.Title>
+            <Typography.Title level={4}>{t('invitations')}</Typography.Title>
             <List
                 itemLayout="vertical"
                 dataSource={listInvitations}
@@ -212,7 +214,7 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
                     <List.Item>
                         <List.Item.Meta
                             avatar={<Avatar icon={<UserOutlined />} />}
-                            title={`Invitation for ${invitation.user_name}`}
+                            title={t('invitation_for', { user_name: invitation.user_name })}
                             description={
                                 <>
                                     <Tag
@@ -220,14 +222,14 @@ const Requests = ({ groupId, token, isAdminProps, setReFetch }) => {
                                             invitation.status === 'pending'
                                                 ? 'blue'
                                                 : invitation.status === 'accepted'
-                                                ? 'green'
-                                                : 'red'
+                                                    ? 'green'
+                                                    : 'red'
                                         }
                                     >
-                                        {invitation.status.toUpperCase()}
+                                        {t(invitation.status.toLowerCase())}
                                     </Tag>
                                     <Typography.Text type="secondary">
-                                        {`Created at: ${invitation.created_at}`}
+                                        {t('created_at', { created_at: invitation.created_at })}
                                     </Typography.Text>
                                 </>
                             }

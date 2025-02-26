@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { message, Input, Button, Card, Spin } from 'antd';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const { TextArea } = Input;
 
 const LogActivity = ({ groupId }) => {
     const { token } = useAuth();
+    const { t } = useTranslation(); // Initialize useTranslation
     const [timestamp, setTimestamp] = useState('');
     const [logEntries, setLogEntries] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -24,10 +26,10 @@ const LogActivity = ({ groupId }) => {
             const cleanResponse = response.startsWith('2000') ? response.slice(5) : response;
             const parsedLogs = parseLogEntries(cleanResponse);
             setLogEntries(parsedLogs);
-            // message.success('Log activity fetched successfully.');
+            // message.success(t('log_activity_fetched_successfully'));
         } catch (error) {
             console.error('Error:', error);
-            // message.error('An error occurred while fetching log activity.');
+            // message.error(t('error_fetching_log_activity'));
         } finally {
             setLoading(false);
         }
@@ -51,27 +53,27 @@ const LogActivity = ({ groupId }) => {
         <div className="container mt-5">
             <Card className="p-4">
                 <div className="form-group mb-3">
-                    <label htmlFor="timestamp">Timestamp</label>
+                    <label htmlFor="timestamp">{t('timestamp')}</label>
                     <Input
                         type="text"
                         id="timestamp"
-                        placeholder="Enter Timestamp"
+                        placeholder={t('enter_timestamp')}
                         value={timestamp}
                         onChange={(e) => setTimestamp(e.target.value)}
                     />
                 </div>
                 <Button type="primary" className="w-100 mb-3" onClick={fetchLogActivity} disabled={loading}>
-                    {loading ? <Spin /> : 'Fetch Log Activity'}
+                    {loading ? <Spin /> : t('fetch_log_activity')}
                 </Button>
                 <Card className="p-4 mt-4">
-                    <h2 className="mb-4 text-center">Activity Log</h2>
+                    <h2 className="mb-4 text-center">{t('activity_log')}</h2>
                     <div className="log-activity" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {logEntries.map((entry, index) => (
                             <Card key={index} className="log-entry mb-3 p-3">
-                                <p><strong>User ID:</strong> {entry.userId}</p>
-                                <p><strong>Action:</strong> {entry.action}</p>
-                                <p><strong>Timestamp:</strong> {entry.timestamp}</p>
-                                <p><strong>Details:</strong> {entry.details}</p>
+                                <p><strong>{t('user_id')}:</strong> {entry.userId}</p>
+                                <p><strong>{t('action')}:</strong> {entry.action}</p>
+                                <p><strong>{t('timestamp')}:</strong> {entry.timestamp}</p>
+                                <p><strong>{t('details')}:</strong> {entry.details}</p>
                             </Card>
                         ))}
                     </div>

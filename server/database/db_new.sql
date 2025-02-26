@@ -1,8 +1,8 @@
 -- Tạo cơ sở dữ liệu nếu chưa tồn tại
-CREATE DATABASE IF NOT EXISTS file_sharing_v2;
+CREATE DATABASE IF NOT EXISTS file_sharing;
 
 -- Sử dụng cơ sở dữ liệu vừa tạo
-USE file_sharing_v2;
+USE file_sharing;
 
 -- Bảng lưu thông tin người dùng
 CREATE TABLE IF NOT EXISTS users (

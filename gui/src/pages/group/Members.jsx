@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Typography, Card, List, Avatar, message, Button, Popconfirm } from 'antd';
 import { UserOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
-
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const [members, setMembers] = useState([]);
     const [isAdmin, setIsAdmin] = useState(isAdminProps);
-    const {username} = useAuth();
+    const { username } = useAuth();
     const parseApiMemberResponse = (response) => {
         const parts = response.split(' ');
         if (parts[0] !== '2000') return [];
@@ -22,22 +23,22 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
         try {
             const response = await window.electronAPI.removeMember(token, groupId, memberId);
             if (response.startsWith('2000')) {
-                message.success('Member removed successfully');
+                message.success(t('member_removed_successfully'));
                 fetchGroupMembers();
             } else {
-                message.error('Failed to remove member');
+                message.error(t('failed_to_remove_member'));
                 console.error('Failed to remove member:', response);
             }
         } catch (error) {
             console.error('Error removing member:', error);
-            message.error('An error occurred while removing the member');
+            message.error(t('error_removing_member'));
         }
     };
 
     const fetchGroupMembers = async () => {
         try {
             const response = await window.electronAPI.listGroupMembers(token, groupId);
-            if(!isAdminProps) setReFetch(true);
+            if (!isAdminProps) setReFetch(true);
 
             if (response.startsWith('2000')) {
                 const parsedMembers = parseApiMemberResponse(response);
@@ -58,7 +59,7 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
     return (
         <div className="container">
             <div>
-                {isAdmin === 1 ? "ADMIN" : "MEMBER"}
+                {isAdmin === 1 ? t('admin') : t('member')}
             </div>
             <List
                 itemLayout="horizontal"
@@ -69,10 +70,10 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
                             isAdmin === 1 && member.name != username
                                 ? [
                                     <Popconfirm
-                                        title="Are you sure to remove this member?"
+                                        title={t('are_you_sure_to_remove_this_member')}
                                         onConfirm={() => handleDeleteMember(member.id)}
-                                        okText="Yes"
-                                        cancelText="No"
+                                        okText={t('yes')}
+                                        cancelText={t('no')}
                                     >
                                         <Button
                                             type="text"
@@ -86,7 +87,7 @@ const Members = ({ groupId, token, isAdminProps, setReFetch }) => {
                         <List.Item.Meta
                             avatar={<Avatar icon={<UserOutlined />} />}
                             title={<Typography.Text>{member.name}</Typography.Text>}
-                            description={`Member ID: ${member.id}`}
+                            description={t('member_id') + member.id}
                         />
                     </List.Item>
                 )}

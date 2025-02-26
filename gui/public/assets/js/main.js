@@ -1,10 +1,10 @@
 /*-----------------------------------------------------------------
 
-Template Name: ClueHost - Hosting HTML5Template
+Template Name: NetShare - Hosting HTML5Template
 Author:  ex-coders
 Author URI: https://themeforest.net/user/ex-coders/portfolio
 Version: 1.0.0
-Description: ClueHost - Hosting HTML5Template<
+Description: NetShare - Hosting HTML5Template<
 
 -------------------------------------------------------------------
 CSS TABLE OF CONTENTS
@@ -24,48 +24,47 @@ CSS TABLE OF CONTENTS
 
 ------------------------------------------------------------------*/
 
-(function($) {
-    "use strict";
+(function ($) {
+    'use strict';
 
-    $(document).ready( function() {
-
+    $(document).ready(function () {
         //>> Mobile Menu Js Start <<//
         $('#mobile-menu').meanmenu({
             meanMenuContainer: '.mobile-menu',
-            meanScreenWidth: "1199",
+            meanScreenWidth: '1199',
             meanExpand: ['<i class="far fa-plus"></i>'],
         });
 
         //>> Sidebar Toggle Js Start <<//
-        $(".offcanvas__close,.offcanvas__overlay").on("click", function() {
-            $(".offcanvas__info").removeClass("info-open");
-            $(".offcanvas__overlay").removeClass("overlay-open");
+        $('.offcanvas__close,.offcanvas__overlay').on('click', function () {
+            $('.offcanvas__info').removeClass('info-open');
+            $('.offcanvas__overlay').removeClass('overlay-open');
         });
-        $(".sidebar__toggle").on("click", function() {
-            $(".offcanvas__info").addClass("info-open");
-            $(".offcanvas__overlay").addClass("overlay-open");
+        $('.sidebar__toggle').on('click', function () {
+            $('.offcanvas__info').addClass('info-open');
+            $('.offcanvas__overlay').addClass('overlay-open');
         });
 
         //>> Body Overlay Js Start <<//
-        $(".body-overlay").on("click", function() {
-            $(".offcanvas__area").removeClass("offcanvas-opened");
-            $(".df-search-area").removeClass("opened");;
-            $(".body-overlay").removeClass("opened");
+        $('.body-overlay').on('click', function () {
+            $('.offcanvas__area').removeClass('offcanvas-opened');
+            $('.df-search-area').removeClass('opened');
+            $('.body-overlay').removeClass('opened');
         });
 
         //>> Sticky Header Js Start <<//
 
-        $(window).scroll(function() {
+        $(window).scroll(function () {
             if ($(this).scrollTop() > 250) {
-                $("#header-sticky").addClass("sticky");
+                $('#header-sticky').addClass('sticky');
             } else {
-                $("#header-sticky").removeClass("sticky");
+                $('#header-sticky').removeClass('sticky');
             }
         });
 
         //>> Video Popup Start <<//
-        $(".img-popup").magnificPopup({
-            type: "image",
+        $('.img-popup').magnificPopup({
+            type: 'image',
             gallery: {
                 enabled: true,
             },
@@ -73,12 +72,11 @@ CSS TABLE OF CONTENTS
 
         $('.video-popup').magnificPopup({
             type: 'iframe',
-            callbacks: {
-            }
+            callbacks: {},
         });
 
         //>> Counterup Start <<//
-        $(".count").counterUp({
+        $('.count').counterUp({
             delay: 15,
             time: 4000,
         });
@@ -90,8 +88,8 @@ CSS TABLE OF CONTENTS
         $('select').niceSelect();
 
         //>> Brand Slider Start <<//
-        if($('.brand-slider').length > 0) {
-            const brandSlider = new Swiper(".brand-slider", {
+        if ($('.brand-slider').length > 0) {
+            const brandSlider = new Swiper('.brand-slider', {
                 spaceBetween: 30,
                 speed: 2000,
                 loop: true,
@@ -122,8 +120,8 @@ CSS TABLE OF CONTENTS
             });
         }
 
-        if($('.brand-slider-2').length > 0) {
-            const brandSlider2 = new Swiper(".brand-slider-2", {
+        if ($('.brand-slider-2').length > 0) {
+            const brandSlider2 = new Swiper('.brand-slider-2', {
                 spaceBetween: 20,
                 speed: 2000,
                 loop: true,
@@ -155,8 +153,8 @@ CSS TABLE OF CONTENTS
         }
 
         //>> Testimonial Slider Start <<//
-        if($('.testimonial-slider').length > 0) {
-            const testimonialSlider = new Swiper(".testimonial-slider", {
+        if ($('.testimonial-slider').length > 0) {
+            const testimonialSlider = new Swiper('.testimonial-slider', {
                 spaceBetween: 20,
                 speed: 3000,
                 loop: true,
@@ -166,12 +164,12 @@ CSS TABLE OF CONTENTS
                     disableOnInteraction: false,
                 },
                 pagination: {
-                    el: ".dot",
+                    el: '.dot',
                     clickable: true,
                 },
                 navigation: {
-                    nextEl: ".array-prev",
-                    prevEl: ".array-next",
+                    nextEl: '.array-prev',
+                    prevEl: '.array-next',
                 },
                 breakpoints: {
                     1199: {
@@ -193,8 +191,8 @@ CSS TABLE OF CONTENTS
             });
         }
 
-        if($('.testimonial-slider-2').length > 0) {
-            const testimonialSlider2 = new Swiper(".testimonial-slider-2", {
+        if ($('.testimonial-slider-2').length > 0) {
+            const testimonialSlider2 = new Swiper('.testimonial-slider-2', {
                 spaceBetween: 30,
                 speed: 2000,
                 loop: true,
@@ -203,15 +201,15 @@ CSS TABLE OF CONTENTS
                     disableOnInteraction: false,
                 },
                 navigation: {
-                    nextEl: ".array-prev",
-                    prevEl: ".array-next",
+                    nextEl: '.array-prev',
+                    prevEl: '.array-next',
                 },
             });
         }
 
         //>> Team Slider Start <<//
-        if($('.team-slider').length > 0) {
-            const teamSlider = new Swiper(".team-slider", {
+        if ($('.team-slider').length > 0) {
+            const teamSlider = new Swiper('.team-slider', {
                 spaceBetween: 30,
                 speed: 3000,
                 loop: true,
@@ -220,8 +218,8 @@ CSS TABLE OF CONTENTS
                     disableOnInteraction: false,
                 },
                 navigation: {
-                    nextEl: ".array-prev",
-                    prevEl: ".array-next",
+                    nextEl: '.array-prev',
+                    prevEl: '.array-next',
                 },
                 breakpoints: {
                     1199: {
@@ -244,7 +242,7 @@ CSS TABLE OF CONTENTS
         }
 
         //>> CountDown Start <<//
-        let targetDate = new Date("2024-07-12 00:00:00").getTime();
+        let targetDate = new Date('2024-07-12 00:00:00').getTime();
         const countdownInterval = setInterval(function () {
             let currentDate = new Date().getTime();
             let remainingTime = targetDate - currentDate;
@@ -252,7 +250,7 @@ CSS TABLE OF CONTENTS
             if (remainingTime <= 0) {
                 clearInterval(countdownInterval);
                 // Display a message or perform any action when the countdown timer reaches zero
-                $("#countdown-container").text("Countdown has ended!");
+                $('#countdown-container').text('Countdown has ended!');
             } else {
                 let days = Math.floor(remainingTime / (1000 * 60 * 60 * 24));
                 let hours = Math.floor(
@@ -264,60 +262,53 @@ CSS TABLE OF CONTENTS
                 let seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
 
                 // Pad single-digit values with leading zeros
-                $("#day").text(days.toString().padStart(2, "0"));
-                $("#hour").text(hours.toString().padStart(2, "0"));
-                $("#min").text(minutes.toString().padStart(2, "0"));
-                $("#sec").text(seconds.toString().padStart(2, "0"));
+                $('#day').text(days.toString().padStart(2, '0'));
+                $('#hour').text(hours.toString().padStart(2, '0'));
+                $('#min').text(minutes.toString().padStart(2, '0'));
+                $('#sec').text(seconds.toString().padStart(2, '0'));
             }
         }, 1000);
 
-
         //>> Search Popup Start <<//
-        const $searchWrap = $(".search-wrap");
-        const $navSearch = $(".nav-search");
-        const $searchClose = $("#search-close");
+        const $searchWrap = $('.search-wrap');
+        const $navSearch = $('.nav-search');
+        const $searchClose = $('#search-close');
 
-        $(".search-trigger").on("click", function (e) {
+        $('.search-trigger').on('click', function (e) {
             e.preventDefault();
-            $searchWrap.animate({ opacity: "toggle" }, 500);
-            $navSearch.add($searchClose).addClass("open");
+            $searchWrap.animate({ opacity: 'toggle' }, 500);
+            $navSearch.add($searchClose).addClass('open');
         });
 
-        $(".search-close").on("click", function (e) {
+        $('.search-close').on('click', function (e) {
             e.preventDefault();
-            $searchWrap.animate({ opacity: "toggle" }, 500);
-            $navSearch.add($searchClose).removeClass("open");
+            $searchWrap.animate({ opacity: 'toggle' }, 500);
+            $navSearch.add($searchClose).removeClass('open');
         });
 
         function closeSearch() {
             $searchWrap.fadeOut(200);
-            $navSearch.add($searchClose).removeClass("open");
+            $navSearch.add($searchClose).removeClass('open');
         }
 
-        $(document.body).on("click", function (e) {
+        $(document.body).on('click', function (e) {
             closeSearch();
         });
 
-        $(".search-trigger, .main-search-input").on("click", function (e) {
+        $('.search-trigger, .main-search-input').on('click', function (e) {
             e.stopPropagation();
         });
 
-         //>> Mouse Cursor Start <<//
-       
-
-
+        //>> Mouse Cursor Start <<//
     }); // End Document Ready Function
 
     function loader() {
-        $(window).on('load', function() {
+        $(window).on('load', function () {
             // Animate loader off screen
-            $(".preloader").addClass('loaded');
-            $(".preloader").delay(600).fadeOut();
+            $('.preloader').addClass('loaded');
+            $('.preloader').delay(600).fadeOut();
         });
     }
 
     loader();
-
-
 })(jQuery); // End jQuery
-

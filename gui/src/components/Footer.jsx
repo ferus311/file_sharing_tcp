@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next';
+
 const Footer = () => {
+    const { t } = useTranslation();
 
     return (
-        <footer class="footer-section fix bg-cover" style={{ backgroundImage: "url('assets/img/section-bg.jpg')" }} >
+        <footer class="footer-section fix bg-cover" style={{ backgroundImage: "url('/assets/img/section-bg.jpg')" }} >
             <div class="footer-widgets-wrapper">
                 <div class="container">
                     <div class="row">
@@ -9,13 +12,12 @@ const Footer = () => {
                             <div class="single-footer-widget">
                                 <div class="widget-head">
                                     <a href="index.html">
-                                        <img src="assets/img/logo/white-logo.svg" alt="logo-img" />
+                                        <img src="/assets/img/logo/white-logo.svg" alt="logo-img" />
                                     </a>
                                 </div>
                                 <div class="footer-content">
                                     <p>
-                                        Nullam interdum libero vitae pretium aliquam donec nibh purus laoreet in ullamcorper
-                                        vel malesuada.
+                                        {t('footer_description')}
                                     </p>
                                     <ul class="contact-info">
                                         <li>
@@ -35,7 +37,7 @@ const Footer = () => {
                                                     </clipPath>
                                                 </defs>
                                             </svg>
-                                            <a href="tel:+61086660112">+6108-666-0112</a>
+                                            <a href="#">+84359549763</a>
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
@@ -44,124 +46,52 @@ const Footer = () => {
                                                     d="M18.0812 13.1941C18.0812 14.883 16.7074 16.2547 15.0206 16.2547H4.97935C3.2926 16.2547 1.91873 14.883 1.91873 13.1941V6.805C1.91835 6.26068 2.06418 5.72624 2.34096 5.25754L7.24049 10.1571C7.9735 10.8922 8.9551 11.2973 10.001 11.2973C11.0448 11.2973 12.0264 10.8922 12.7594 10.1571L17.659 5.25754C17.9358 5.72623 18.0816 6.26067 18.0812 6.805V13.1941H18.0812ZM15.0206 3.74441H4.97935C4.28279 3.74441 3.63978 3.98016 3.12541 4.37238L8.07424 9.32336C8.5865 9.83344 9.27017 10.1164 10.001 10.1164C10.7297 10.1164 11.4135 9.83344 11.9257 9.32336L16.8745 4.37238C16.3602 3.98016 15.7172 3.74441 15.0206 3.74441ZM15.0206 2.56348H4.97935C2.64103 2.56348 0.737793 4.46672 0.737793 6.80504V13.1942C0.737793 15.5346 2.64103 17.4357 4.97935 17.4357H15.0206C17.3589 17.4357 19.2622 15.5346 19.2622 13.1942V6.805C19.2622 4.46668 17.3589 2.56348 15.0206 2.56348Z"
                                                     fill="white" />
                                             </svg>
-                                            <a href="mailto:info@example.com">info@example.com</a>
+                                            <a href="mailto:info@example.com">fongcypher@gmail.com</a>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
                         <div class="col-xl-2 col-lg-4 col-md-3 ps-lg-3 wow fadeInUp" data-wow-delay=".4s">
-                            <div class="single-footer-widget">
-                                <div class="widget-head">
-                                    <h3>Company</h3>
-                                </div>
-                                <ul class="list-area">
-                                    <li>
-                                        <a href="about.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            ClueHost About
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="contact.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Contact Us
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="pricing.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Pricing Plans
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="faq.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            FAQ’S
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="contact.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Privacy Policy
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+
                         </div>
                         <div class="col-xl-2 col-lg-4 col-md-3 ps-lg-4 wow fadeInUp" data-wow-delay=".6s">
-                            <div class="single-footer-widget style-margin">
-                                <div class="widget-head">
-                                    <h3>Hosting</h3>
-                                </div>
-                                <ul class="list-area">
-                                    <li>
-                                        <a href="https://ex-coders.com/html/cluehost/shared-hosting.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Shared Hosting
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="reseller-hosting.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Reseller Hosting
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="vps-hosting.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            VPS Hosting
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="cloud-hosting.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Cloud Hosting
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="dedicated-hosting.html">
-                                            <i class="fa-regular fa-chevrons-right"></i>
-                                            Dedicated Hosting
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+
                         </div>
                         <div class="col-xl-2 col-lg-4 col-md-6 ps-lg-4 wow fadeInUp" data-wow-delay=".8s">
                             <div class="single-footer-widget">
                                 <div class="widget-head">
-                                    <h3>Support</h3>
+                                    <h3>{t('support')}</h3>
                                 </div>
                                 <ul class="list-area">
                                     <li>
-                                        <a href="https://ex-coders.com/html/cluehost/login.html">
+                                        <a href="#">
                                             <i class="fa-regular fa-chevrons-right"></i>
-                                            Login Account
+                                            {t('login')}
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="https://ex-coders.com/html/cluehost/register.html">
+                                        <a href="#">
                                             <i class="fa-regular fa-chevrons-right"></i>
-                                            Register Account
+                                            {t('register')}
                                         </a>
                                     </li>
                                     <li>
                                         <a href="contact.html">
                                             <i class="fa-regular fa-chevrons-right"></i>
-                                            Submit Ticket
+                                            {t('submit_ticket')}
                                         </a>
                                     </li>
                                     <li>
                                         <a href="support.html">
                                             <i class="fa-regular fa-chevrons-right"></i>
-                                            Support Center
+                                            {t('support_center')}
                                         </a>
                                     </li>
                                     <li>
                                         <a href="contact.html">
                                             <i class="fa-regular fa-chevrons-right"></i>
-                                            Live Chat
+                                            {t('live_chat')}
                                         </a>
                                     </li>
                                 </ul>
@@ -170,14 +100,14 @@ const Footer = () => {
                         <div class="col-xl-3 col-lg-4 col-md-6 ps-lg-4 wow fadeInUp" data-wow-delay=".9s">
                             <div class="single-footer-widget">
                                 <div class="widget-head">
-                                    <h3>Newsletter</h3>
+                                    <h3>{t('newsletter')}</h3>
                                 </div>
                                 <div class="footer-content">
                                     <p>
-                                        Sign up to seargin weekly newsletter to get the latest updates.
+                                        {t('newsletter_description')}
                                     </p>
                                     <div class="footer-input">
-                                        <input type="email" id="email2" placeholder="Enter Email Address" />
+                                        <input type="email" id="email2" placeholder={t('enter_email_address')} />
                                         <button class="newsletter-btn" type="submit">
                                             <i class="fa-regular fa-paper-plane"></i>
                                         </button>
@@ -198,27 +128,13 @@ const Footer = () => {
                 <div class="container">
                     <div class="footer-wrapper d-flex align-items-center justify-content-between">
                         <p class="wow fadeInLeft" data-wow-delay=".3s">
-                            © All Copyright 2024 by <a href="index.html">ClueHost </a>
+                            © {t('all_copyright')} 2024 by <a href="index.html">NetShare </a>
                         </p>
                         <ul class="brand-logo wow fadeInRight" data-wow-delay=".5s">
                             <li>
-                                <img src="assets/img/visa-logo.png" alt="img" />
+                                <img src="/assets/img/visa-logo.png" alt="img" />
                             </li>
-                            <li>
-                                <a href="contact.html">
-                                    <img src="assets/img/mastercard-logo.png" alt="img" />
-                                </a>
-                            </li>
-                            <li>
-                                <a href="contact.html">
-                                    <img src="assets/img/payoneer-logo.png" alt="img" />
-                                </a>
-                            </li>
-                            <li>
-                                <a href="contact.html">
-                                    <img src="assets/img/affirm-logo.png" alt="img" />
-                                </a>
-                            </li>
+
                         </ul>
                     </div>
                 </div>

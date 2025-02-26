@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Modal, Button, Form, Input, Space, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { useTranslation } from 'react-i18next';
 
 const CreateGroupModal = ({ isModalVisible, handleCancel, handleCreateGroup, loading }) => {
+    const { t } = useTranslation();
 
     return (
         <Modal
-            title="Create a New Group"
+            title={t('create_group')}
             visible={isModalVisible}
             onCancel={handleCancel}
             footer={null}
@@ -18,24 +20,24 @@ const CreateGroupModal = ({ isModalVisible, handleCancel, handleCreateGroup, loa
                 name="create-group-form"
             >
                 <Form.Item
-                    label="Group Name"
+                    label={t('group_name')}
                     name="groupName"
                     rules={[
-                        { required: true, message: "Please input the group name!" },
+                        { required: true, message: t('please_input_group_name') },
                     ]}
                 >
-                    <Input textColor="black" placeholder="Enter group name" />
+                    <Input textColor="black" placeholder={t('enter_group_name')} />
                 </Form.Item>
 
                 <Form.Item>
                     <Space>
-                        <Button onClick={handleCancel}>Cancel</Button>
+                        <Button onClick={handleCancel}>{t('cancel')}</Button>
                         <Button
                             type="primary"
                             htmlType="submit"
                             loading={loading}
                         >
-                            Create Group
+                            {t('create_group')}
                         </Button>
                     </Space>
                 </Form.Item>

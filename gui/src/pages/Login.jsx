@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const Login = () => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const { login } = useAuth();
     const [username, setName] = useState('');
     const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ const Login = () => {
             }
         } catch (error) {
             console.error('Error:', error);
-            setResponseMessage('An error occurred during login.');
+            setResponseMessage(t('error_during_login'));
         }
     };
 
@@ -33,7 +35,7 @@ const Login = () => {
         <div className="login-container">
             <div className="login-header bg-primary text-white p-3 d-flex align-items-center">
                 <button className="btn btn-link text-white" onClick={() => navigate('/')}>
-                    <i className="fa fa-arrow-left"></i> Back to Homepage
+                    <i className="fa fa-arrow-left"></i> {t('back_to_homepage')}
                 </button>
             </div>
             <div className="login-content container mt-5">
@@ -41,10 +43,10 @@ const Login = () => {
                     <div className="col-md-6">
                         <div className="card shadow">
                             <div className="card-body">
-                                <h2 className="text-center mb-4">Login</h2>
+                                <h2 className="text-center mb-4">{t('login')}</h2>
                                 <form onSubmit={handleLogin}>
                                     <div className="mb-3">
-                                        <label htmlFor="username" className="form-label">Username</label>
+                                        <label htmlFor="username" className="form-label">{t('username')}</label>
                                         <input
                                             type="text"
                                             className="form-control"
@@ -55,7 +57,7 @@ const Login = () => {
                                         />
                                     </div>
                                     <div className="mb-3">
-                                        <label htmlFor="password" className="form-label">Password</label>
+                                        <label htmlFor="password" className="form-label">{t('password')}</label>
                                         <input
                                             type="password"
                                             className="form-control"
@@ -68,30 +70,30 @@ const Login = () => {
                                     <div className="d-flex justify-content-between align-items-center mb-3">
                                         <div className="form-check">
                                             <input className="form-check-input" type="checkbox" id="rememberMe" />
-                                            <label className="form-check-label" htmlFor="rememberMe">Remember me</label>
+                                            <label className="form-check-label" htmlFor="rememberMe">{t('remember_me')}</label>
                                         </div>
-                                        <a href="#" className="text-primary">Forgot Your password?</a>
+                                        <a href="#" className="text-primary">{t('forgot_password')}</a>
                                     </div>
-                                    <button type="submit" className="btn btn-primary w-100">Log in</button>
+                                    <button type="submit" className="btn btn-primary w-100">{t('login')}</button>
                                 </form>
                                 <div className="text-center mt-3">
-                                    <span>Or</span>
+                                    <span>{t('or')}</span>
                                 </div>
                                 <div className="d-grid gap-2 mt-3">
                                     <button className="btn btn-outline-secondary">
-                                        <img src="assets/img/sign/google.png" alt="Google" className="me-2" />
-                                        Continue With Google
+                                        <img src="/assets/img/sign/google.png" alt="Google" className="me-2" />
+                                        {t('continue_with_google')}
                                     </button>
                                     <button className="btn btn-outline-secondary">
-                                        <img src="assets/img/sign/fb.png" alt="Facebook" className="me-2" />
-                                        Continue with Facebook
+                                        <img src="/assets/img/sign/fb.png" alt="Facebook" className="me-2" />
+                                        {t('continue_with_facebook')}
                                     </button>
                                 </div>
                                 <div className="text-center mt-3">
-                                    <span>I accept your <a href="#" className="text-primary">terms & conditions</a></span>
+                                    <span>{t('accept_terms')}</span>
                                 </div>
                                 <div className="text-center mt-3">
-                                    <button className="btn btn-link" onClick={handleSignupClick}>Create account</button>
+                                    <button className="btn btn-link" onClick={handleSignupClick}>{t('create_account')}</button>
                                 </div>
                                 {responseMessage && (
                                     <div className="alert alert-info mt-3" role="alert">

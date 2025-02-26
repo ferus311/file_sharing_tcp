@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Layout, Card, List, Avatar, message, Button, Popconfirm, Modal, Input, Upload, Spin } from 'antd';
 import { FolderOutlined, FileOutlined, DeleteOutlined, UploadOutlined, PlusOutlined, DownloadOutlined, CopyOutlined, EditOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const navigate = useNavigate();
     const [isAdmin, setIsAdmin] = useState(isAdminProps);
     const [items, setItems] = useState([]);
@@ -77,7 +79,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             else if (itemType === 'F') response = await window.electronAPI.deleteFile(cleanToken, itemId);
 
             if (response.startsWith('2000')) {
-                message.success("Item deleted successfully");
+                message.success(t('item_deleted_successfully'));
                 fetchListGroupContent();
             } else {
                 console.error("Failed to delete item:", response);
@@ -117,7 +119,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
         setUploading(true);
         setUploadingFileName(file.name);
 
-        const CHUNK_SIZE = 1024; // Kích thước mỗi phần tệp
+        const CHUNK_SIZE = 1024 * 2; // Kích thước mỗi phần tệp
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const fileExtension = file.name.split('.').pop(); // Trích xuất định dạng tệp
 
@@ -136,14 +138,14 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
 
             // Chuỗi dữ liệu cần upload
             const dataString = `${file.name}||${fileExtension}||${chunkIndex}||${totalChunks}||${chunkData}`;
-            message.info(`Uploading chunk ${chunkIndex + 1} of ${totalChunks}...`);
+            message.info(t('uploading_chunk', { chunkIndex: chunkIndex + 1, totalChunks }));
             try {
                 const response = await window.electronAPI.uploadFile(token, groupId, dirId, dataString);
                 if (response.startsWith('2001')) {
                     // Chunk upload successful
                 } else if (response.startsWith('2000')) {
                     // File upload successful
-                    message.success('File uploaded successfully.');
+                    message.success(t('file_uploaded_successfully'));
                     setUploading(false);
                     setUploadingFileName('');
                     fetchListGroupContent();
@@ -153,14 +155,14 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                 }
             } catch (error) {
                 console.error('Error uploading file:', error);
-                message.error('An error occurred while uploading the file.');
+                message.error(t('error_uploading_file'));
                 setUploading(false);
                 setUploadingFileName('');
                 return;
             }
         }
 
-        message.success('File uploaded successfully.');
+        message.success(t('file_uploaded_successfully'));
         fetchListGroupContent();
     };
 
@@ -182,7 +184,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             const result = await window.electronAPI.downloadFile(token, fileId, fileName);
 
             if (result.success) {
-                alert(`File has been downloaded to: ${result.filePath}`);
+                alert(t('file_downloaded_to', { filePath: result.filePath }));
             }
         } catch (error) {
             console.error('Error downloading file:', error);
@@ -195,18 +197,18 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             const response = await window.electronAPI.createFolder(cleanToken, groupId, dirId, newFolderName);
 
             if (response.startsWith('2000')) {
-                message.success('Folder created successfully.');
+                message.success(t('folder_created_successfully'));
                 fetchListGroupContent();
             } else {
                 console.error('Failed to create folder:', response);
-                message.error('An error occurred while creating the folder.');
+                message.error(t('error_creating_folder'));
             }
 
             setIsModalVisible(false);
             setNewFolderName('');
         } catch (error) {
             console.error('Error creating folder:', error);
-            message.error('An error occurred while creating the folder.');
+            message.error(t('error_creating_folder'));
         }
     };
 
@@ -251,15 +253,15 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.copyItem(cleanToken, itemToCopy.id, targetDirId, itemToCopy.type === 'F');
             if (response.startsWith('2000')) {
-                message.success('Item copied successfully.');
+                message.success(t('item_copied_successfully'));
                 fetchListGroupContent();
             } else {
                 console.error('Failed to copy item:', response);
-                message.error('An error occurred while copying the item.');
+                message.error(t('error_copying_item'));
             }
         } catch (error) {
             console.error('Error copying item:', error);
-            message.error('An error occurred while copying the item.');
+            message.error(t('error_copying_item'));
         } finally {
             setCopying(false);
             setItemToCopy(null);
@@ -278,15 +280,15 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.renameItem(cleanToken, itemToRename.id, newItemName, itemToRename.type === 'F');
             if (response.startsWith('2000')) {
-                message.success('Item renamed successfully.');
+                message.success(t('item_renamed_successfully'));
                 fetchListGroupContent();
             } else {
                 console.error('Failed to rename item:', response);
-                message.error('An error occurred while renaming the item.');
+                message.error(t('error_renaming_item'));
             }
         } catch (error) {
             console.error('Error renaming item:', error);
-            message.error('An error occurred while renaming the item.');
+            message.error(t('error_renaming_item'));
         } finally {
             setIsRenameModalVisible(false);
             setNewItemName('');
@@ -310,15 +312,15 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             const cleanToken = token.replace(/\n/g, '').replace(/\r/g, '');
             const response = await window.electronAPI.moveItem(cleanToken, itemToMove.id, moveTargetDirId, itemToMove.type === 'F');
             if (response.startsWith('2000')) {
-                message.success('Item moved successfully.');
+                message.success(t('item_moved_successfully'));
                 fetchListGroupContent();
             } else {
                 console.error('Failed to move item:', response);
-                message.error('An error occurred while moving the item.');
+                message.error(t('error_moving_item'));
             }
         } catch (error) {
             console.error('Error moving item:', error);
-            message.error('An error occurred while moving the item.');
+            message.error(t('error_moving_item'));
         } finally {
             setIsMoveModalVisible(false);
             setMoveTargetDirId(null);
@@ -335,73 +337,73 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
         <>
             {/* Remove the loading spinner */}
             <Modal
-                title="File already exists"
+                title={t('file_already_exists')}
                 visible={overwriteConfirmVisible}
                 onOk={confirmOverwrite}
                 onCancel={cancelOverwrite}
-                okText="Overwrite"
-                cancelText="Cancel"
+                okText={t('overwrite')}
+                cancelText={t('cancel')}
             >
-                <p>A file with the same name already exists. Do you want to overwrite it?</p>
+                <p>{t('file_already_exists_message')}</p>
             </Modal>
             <Modal
-                title="Item already exists"
+                title={t('item_already_exists')}
                 visible={overwriteCopyConfirmVisible}
                 onOk={confirmOverwriteCopy}
                 onCancel={() => setOverwriteCopyConfirmVisible(false)}
-                okText="Overwrite"
-                cancelText="Cancel"
+                okText={t('overwrite')}
+                cancelText={t('cancel')}
             >
-                <p>An item with the same name already exists in the target directory. Do you want to overwrite it?</p>
+                <p>{t('item_already_exists_message')}</p>
             </Modal>
             <Modal
-                title="Item already exists"
+                title={t('item_already_exists')}
                 visible={overwriteMoveConfirmVisible}
                 onOk={confirmOverwriteMove}
                 onCancel={() => setOverwriteMoveConfirmVisible(false)}
-                okText="Overwrite"
-                cancelText="Cancel"
+                okText={t('overwrite')}
+                cancelText={t('cancel')}
             >
-                <p>An item with the same name already exists in the target directory. Do you want to overwrite it?</p>
+                <p>{t('item_already_exists_message')}</p>
             </Modal>
             <Modal
-                title="Copy Item"
+                title={t('copy_item')}
                 visible={!!itemToCopy}
                 onOk={handleCopyItem}
                 onCancel={() => setItemToCopy(null)}
-                okText="Copy"
-                cancelText="Cancel"
+                okText={t('copy')}
+                cancelText={t('cancel')}
             >
                 <Input
-                    placeholder="Enter target directory ID"
+                    placeholder={t('enter_target_directory_id')}
                     value={targetDirId}
                     onChange={(e) => setTargetDirId(e.target.value)}
                 />
             </Modal>
             <Modal
-                title="Rename Item"
+                title={t('rename_item')}
                 visible={isRenameModalVisible}
                 onOk={handleRenameItem}
                 onCancel={() => setIsRenameModalVisible(false)}
-                okText="Rename"
-                cancelText="Cancel"
+                okText={t('rename')}
+                cancelText={t('cancel')}
             >
                 <Input
-                    placeholder="Enter new item name"
+                    placeholder={t('enter_new_item_name')}
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                 />
             </Modal>
             <Modal
-                title="Move Item"
+                title={t('move_item')}
                 visible={isMoveModalVisible}
                 onOk={handleMoveItem}
                 onCancel={() => setIsMoveModalVisible(false)}
-                okText="Move"
-                cancelText="Cancel"
+                okText={t('move')}
+                cancelText={t('cancel')}
             >
                 <Input
-                    placeholder="Enter target directory ID"
+                    placeholder={t('enter_target_directory_id')}
                     value={moveTargetDirId}
                     onChange={(e) => setMoveTargetDirId(e.target.value)}
                 />
@@ -412,23 +414,23 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
             <Layout>
                 <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Button onClick={handleBack} disabled={dirHistory.length <= 1}>
-                        Back
+                        {t('back')}
                     </Button>
                     <Upload customRequest={handleUpload} showUploadList={false} style={{ marginLeft: '8px' }}>
-                        <Button icon={<UploadOutlined />}>Upload File</Button>
+                        <Button icon={<UploadOutlined />}>{t('upload_file')}</Button>
                     </Upload>
                     <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)} style={{ marginLeft: '8px' }}>
-                        Create Folder
+                        {t('create_folder')}
                     </Button>
                 </div>
                 <Modal
-                    title="Create New Folder"
+                    title={t('create_new_folder')}
                     visible={isModalVisible}
                     onOk={handleCreateFolder}
                     onCancel={() => setIsModalVisible(false)}
                 >
                     <Input
-                        placeholder="Enter folder name"
+                        placeholder={t('enter_folder_name')}
                         value={newFolderName}
                         onChange={(e) => setNewFolderName(e.target.value)}
                     />
@@ -438,7 +440,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                 grid={{ gutter: 16, column: 4 }}
                 dataSource={items}
                 loading={loading}
-                locale={{ emptyText: 'No documents in this group' }} // Add this line
+                locale={{ emptyText: t('no_documents_in_this_group') }} // Add this line
                 renderItem={item => (
                     <List.Item key={item.id}>
                         <Card
@@ -450,10 +452,10 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                                 <>
                                     {isAdmin === 1 && (
                                         <Popconfirm
-                                            title="Are you sure to delete this item?"
+                                            title={t('are_you_sure_to_delete_this_item')}
                                             onConfirm={() => handleDeleteItem(item.id, item.type)}
-                                            okText="Yes"
-                                            cancelText="No"
+                                            okText={t('yes')}
+                                            cancelText={t('no')}
                                         >
                                             <Button
                                                 type="text"
@@ -506,7 +508,7 @@ const Documents = ({ groupId, rootDirId, token, isAdminProps, setReFetch }) => {
                             }
                         >
                             <Card.Meta
-                                title={item.type === 'D' ? `Directory: ${item.name}` : `File: ${item.name}`}
+                                title={item.type === 'D' ? `${t('directory')}: ${item.name}` : `${t('file')}: ${item.name}`}
                                 description={`ID: ${item.id}`}
                             />
                         </Card>
